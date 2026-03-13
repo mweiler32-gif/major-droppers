@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Major Droppers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Firebase Configuration
+    const FIREBASE_URL = 'https://major-droppers-default-rtdb.firebaseio.com/';
+    
+    const firebaseConfig = {
+      databaseURL: FIREBASE_URL
+    };
+    
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const DEFAULT_PLAYERS = ['ROBERTS', 'CRAIG', 'SIEVE', 'WEILER', 'RED', 'PALMER'];
+    const ROUNDS = ['Round 1', 'Round 2', 'Round 3', 'Round 4'];
+    const ENTRY_FEE = 70;
+    const ROSTER_SIZE = 8;
+    
+    // Preloaded field sorted by betting odds (source: golfodds.com)
+    const PRELOADED_FIELD = [
+      { name: "Scottie Scheffler", odds: "+450" },
+      { name: "Rory McIlroy", odds: "+1600" },
+      { name: "Collin Morikawa", odds: "+1800" },
+      { name: "Si Woo Kim", odds: "+2000" },
+      { name: "Tommy Fleetwood", odds: "+2500" },
+      { name: "Xander Schauffele", odds: "+2500" },
+      { name: "Ludvig Aberg", odds: "+2500" },
+      { name: "Russell Henley", odds: "+2500" },
+      { name: "Hideki Matsuyama", odds: "+2500" },
+      { name: "Cameron Young", odds: "+3000" },
+      { name: "Matt Fitzpatrick", odds: "+3000" },
+      { name: "Viktor Hovland", odds: "+3000" },
+      { name: "Min Woo Lee", odds: "+3500" },
+      { name: "Sepp Straka", odds: "+4000" },
+      { name: "Jake Knapp", odds: "+4500" },
+      { name: "Akshay Bhatia", odds: "+4500" },
+      { name: "Chris Gotterup", odds: "+5000" },
+      { name: "Robert MacIntyre", odds: "+5000" },
+      { name: "Harris English", odds: "+5000" },
+      { name: "Rickie Fowler", odds: "+5000" },
+      { name: "Shane Lowry", odds: "+5000" },
+      { name: "Jacob Bridgeman", odds: "+5000" },
+      { name: "Daniel Berger", odds: "+5500" },
+      { name: "Maverick McNealy", odds: "+5500" },
+      { name: "Kurt Kitayama", odds: "+5500" },
+      { name: "Ben Griffin", odds: "+6000" },
+      { name: "Adam Scott", odds: "+6000" },
+      { name: "Brooks Koepka", odds: "+6500" },
+      { name: "Patrick Cantlay", odds: "+6500" },
+      { name: "Jordan Spieth", odds: "+6500" },
+      { name: "Ryan Gerard", odds: "+6500" },
+      { name: "Alex Noren", odds: "+6500" },
+      { name: "Corey Conners", odds: "+6500" },
+      { name: "Sam Burns", odds: "+7000" },
+      { name: "Justin Rose", odds: "+7000" },
+      { name: "Nicolai Hojgaard", odds: "+8000" },
+      { name: "Harry Hall", odds: "+8000" },
+      { name: "Aaron Rai", odds: "+8000" },
+      { name: "J.J. Spaun", odds: "+8000" },
+      { name: "Sahith Theegala", odds: "+8000" },
+      { name: "Jason Day", odds: "+9000" },
+      { name: "Pierceson Coody", odds: "+9000" },
+      { name: "Davis Thompson", odds: "+9000" },
+      { name: "Christiaan Bezuidenhout", odds: "+9000" },
+      { name: "Justin Thomas", odds: "+10000" },
+      { name: "Rasmus Hojgaard", odds: "+10000" },
+      { name: "Keegan Bradley", odds: "+10000" },
+      { name: "Michael Thorbjornsen", odds: "+10000" },
+      { name: "Taylor Pendrith", odds: "+10000" },
+      { name: "Keith Mitchell", odds: "+10000" },
+      { name: "Nick Taylor", odds: "+10000" },
+      { name: "Nico Echavarria", odds: "+12500" },
+      { name: "Ricky Castillo", odds: "+12500" },
+      { name: "Matt McCarty", odds: "+12500" },
+      { name: "Sam Stevens", odds: "+12500" },
+      { name: "Ryo Hisatsune", odds: "+12500" },
+      { name: "Wyndham Clark", odds: "+12500" },
+      { name: "Ryan Fox", odds: "+12500" },
+      { name: "Thorbjorn Olesen", odds: "+15000" },
+      { name: "Max McGreevy", odds: "+15000" },
+      { name: "Joel Dahmen", odds: "+15000" },
+      { name: "Kristoffer Reitan", odds: "+15000" },
+      { name: "Marco Penge", odds: "+15000" },
+      { name: "Max Greyserman", odds: "+15000" },
+      { name: "Alex Smalley", odds: "+15000" },
+      { name: "Max Homa", odds: "+15000" },
+      { name: "Tony Finau", odds: "+15000" },
+      { name: "Sungjae Im", odds: "+15000" },
+      { name: "Rico Hoey", odds: "+20000" },
+      { name: "Brian Harman", odds: "+20000" },
+      { name: "Johnny Keefer", odds: "+20000" },
+      { name: "Michael Brennan", odds: "+20000" },
+      { name: "Bud Cauley", odds: "+20000" },
+      { name: "Jordan Smith", odds: "+20000" },
+      { name: "J.T. Poston", odds: "+20000" },
+      { name: "Patrick Rodgers", odds: "+20000" },
+      { name: "Haotong Li", odds: "+20000" },
+      { name: "Denny McCarthy", odds: "+20000" },
+      { name: "Mackenzie Hughes", odds: "+20000" },
+      { name: "Mac Meissner", odds: "+20000" },
+      { name: "Lucas Glover", odds: "+25000" },
+      { name: "Garrick Higgo", odds: "+25000" },
+      { name: "Kevin Yu", odds: "+25000" },
+      { name: "Michael Kim", odds: "+25000" },
+      { name: "Taylor Moore", odds: "+25000" },
+      { name: "Andrew Novak", odds: "+25000" },
+      { name: "Austin Smotherman", odds: "+25000" },
+      { name: "Tom Hoge", odds: "+25000" },
+      { name: "Seamus Power", odds: "+30000" },
+      { name: "Stephan Jaeger", odds: "+30000" },
+      { name: "Chris Kirk", odds: "+30000" },
+      { name: "Sami Valimaki", odds: "+30000" },
+      { name: "Emiliano Grillo", odds: "+30000" },
+      { name: "Aldrich Potgieter", odds: "+30000" },
+      { name: "Zecheng Dou", odds: "+30000" },
+      { name: "S.H. Kim", odds: "+30000" },
+      { name: "Lee Hodges", odds: "+30000" },
+      { name: "Eric Cole", odds: "+30000" },
+      { name: "Vince Whaley", odds: "+30000" },
+      { name: "Matti Schmid", odds: "+30000" },
+      { name: "Kevin Roy", odds: "+30000" },
+      { name: "Chad Ramey", odds: "+30000" },
+      { name: "Takumi Kanaya", odds: "+40000" },
+      { name: "Jhonattan Vegas", odds: "+40000" },
+      { name: "Mark Hubbard", odds: "+40000" },
+      { name: "William Mouw", odds: "+40000" },
+      { name: "Gary Woodland", odds: "+50000" },
+      { name: "Chandler Phillips", odds: "+50000" },
+      { name: "Sudarshan Yellamaraju", odds: "+50000" },
+      { name: "Zach Bauchou", odds: "+50000" },
+      { name: "Steven Fisk", odds: "+50000" },
+      { name: "A.J. Ewart", odds: "+50000" },
+      { name: "Andrew Putnam", odds: "+50000" },
+      { name: "Davis Riley", odds: "+50000" },
+      { name: "Patton Kizzire", odds: "+60000" },
+      { name: "Matthieu Pavon", odds: "+60000" },
+      { name: "Karl Vilips", odds: "+60000" },
+      { name: "Erik van Rooyen", odds: "+60000" },
+      { name: "Cam Davis", odds: "+100000" },
+      { name: "Adam Schenk", odds: "+100000" },
+      { name: "Danny Walker", odds: "+100000" },
+      { name: "Joe Highsmith", odds: "+100000" },
+      { name: "Brian Campbell", odds: "+100000" },
+    ];
+    
+    // Helper function to normalize names for matching (removes diacritics)
+    const normalizeName = (name) => {
+      if (!name) return '';
+      return name
+        // Handle Nordic characters that don't decompose with NFD
+        .replace(/[øØ]/g, 'o')
+        .replace(/[æÆ]/g, 'ae')
+        .replace(/[åÅ]/g, 'a')
+        .replace(/[ðÐ]/g, 'd')
+        .replace(/[þÞ]/g, 'th')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritics
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '') // Keep only letters and spaces
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+    
+    // Helper to check if two names match (handles diacritics)
+    const namesMatch = (name1, name2) => {
+      const n1 = normalizeName(name1);
+      const n2 = normalizeName(name2);
+      if (!n1 || !n2) return false;
+      return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+    };
+
+    const generateSnakeOrder = (players) => {
+      const order = [];
+      for (let round = 0; round < ROSTER_SIZE; round++) {
+        if (round % 2 === 0) {
+          order.push(...players);
+        } else {
+          order.push(...[...players].reverse());
+        }
+      }
+      return order;
+    };
+    
+    // Helper to find score data with fuzzy name matching (handles diacritics)
+    const getGolferScoreFromScores = (scores, golferName) => {
+      if (!golferName) return {};
+      // First try exact match
+      if (scores[golferName]) return scores[golferName];
+      // Then try fuzzy match
+      const matchingKey = Object.keys(scores).find(key => namesMatch(key, golferName));
+      return matchingKey ? scores[matchingKey] : {};
+    };
+
+    function MajorDroppers() {
+      const [players, setPlayers] = useState(DEFAULT_PLAYERS);
+      const [teams, setTeams] = useState(() => {
+        const initial = {};
+        DEFAULT_PLAYERS.forEach(p => initial[p] = []);
+        return initial;
+      });
+      const [scores, setScores] = useState({});
+      const [currentRound, setCurrentRound] = useState(0);
+      const [tournamentName, setTournamentName] = useState('THE PLAYERS Championship 2026');
+      const [view, setView] = useState('dashboard');
+      const [champion, setChampion] = useState(null);
+      const [connected, setConnected] = useState(false);
+      const [syncing, setSyncing] = useState(true);
+
+      const [draftMode, setDraftMode] = useState(false);
+      const [availableGolfers, setAvailableGolfers] = useState([]);
+      const [draftOrder, setDraftOrder] = useState([]);
+      const [currentPick, setCurrentPick] = useState(0);
+      const [golferInput, setGolferInput] = useState('');
+      const [draftOrderInput, setDraftOrderInput] = useState(DEFAULT_PLAYERS.join(', '));
+      const [searchTerm, setSearchTerm] = useState('');
+      const [parseStatus, setParseStatus] = useState('');
+      const [editingTeam, setEditingTeam] = useState(null); // Track which team is being edited
+      
+      // Google Sheets integration for live ESPN scores
+      const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ121Dx0jInZVi40FINWYApShk7Hy1IQU316o3zFhNaebyRVOf4Zb701Y8To6T6nrSV8FA124Mfc7DA/pub?output=csv');
+      const [liveScores, setLiveScores] = useState([]);
+      const [lastFetch, setLastFetch] = useState(null);
+      const [fetchError, setFetchError] = useState('');
+      const [isFetching, setIsFetching] = useState(false);
+      const [cutLine, setCutLine] = useState(null);
+      const [tournamentRound, setTournamentRound] = useState(0); // 0=pre, 1-4=rounds
+      
+      // Track if we're currently writing to prevent loops
+      const isWriting = useRef(false);
+
+      // Connect to Firebase and listen for changes
+      useEffect(() => {
+        const gameRef = database.ref('game');
+        
+        // Listen for real-time updates
+        gameRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data && !isWriting.current) {
+            if (data.teams) setTeams(data.teams);
+            if (data.scores) setScores(data.scores);
+            if (data.tournamentName) setTournamentName(data.tournamentName);
+            if (data.champion !== undefined) setChampion(data.champion);
+            if (data.draftState) {
+              setDraftMode(data.draftState.draftMode || false);
+              setAvailableGolfers(data.draftState.availableGolfers || []);
+              setDraftOrder(data.draftState.draftOrder || []);
+              setCurrentPick(data.draftState.currentPick || 0);
+            }
+          }
+          setConnected(true);
+          setSyncing(false);
+        });
+
+        // Connection state
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+          setConnected(snap.val() === true);
+        });
+
+        return () => {
+          gameRef.off();
+          connectedRef.off();
+        };
+      }, []);
+
+      // Save to Firebase when data changes
+      const saveToFirebase = async (updates) => {
+        isWriting.current = true;
+        try {
+          await database.ref('game').update(updates);
+          // Give Firebase listener time to process before accepting updates again
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (err) {
+          console.error('Firebase save error:', err);
+        }
+        isWriting.current = false;
+      };
+
+      // Fetch scores from Google Sheet
+      const fetchLiveScores = async () => {
+        if (!sheetUrl) {
+          setFetchError('No Google Sheet URL configured');
+          return;
+        }
+        
+        setIsFetching(true);
+        setFetchError('');
+        
+        try {
+          // Skip direct fetch (CORS blocks it), go straight to proxies
+          const corsProxies = [
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+          ];
+          
+          // Helper to fetch with timeout
+          const fetchWithTimeout = async (url, timeoutMs = 3000) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+              const response = await fetch(url, { signal: controller.signal });
+              clearTimeout(timeoutId);
+              return response;
+            } catch (e) {
+              clearTimeout(timeoutId);
+              throw e;
+            }
+          };
+          
+          let response;
+          for (const proxyFn of corsProxies) {
+            try {
+              response = await fetchWithTimeout(proxyFn(sheetUrl), 3000);
+              if (response.ok) break;
+            } catch (e) {
+              continue;
+            }
+          }
+          
+          if (!response || !response.ok) {
+            throw new Error('All fetch attempts failed');
+          }
+          
+          const text = await response.text();
+          const rows = text.split('\n').map(row => {
+            const cells = [];
+            let current = '';
+            let inQuotes = false;
+            for (let char of row) {
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === ',' && !inQuotes) {
+                cells.push(current.trim().replace(/"/g, ''));
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            cells.push(current.trim().replace(/"/g, ''));
+            return cells;
+          });
+          
+          // Check for projected cut line
+          let foundCutLine = null;
+          for (let i = 0; i < rows.length; i++) {
+            const rowText = rows[i].join(' ').toLowerCase();
+            if (rowText.includes('projected cut') || rowText.includes('cut line')) {
+              // Try to extract the cut number (e.g., "+2", "E", "-1")
+              // Handle formats like "Projected Cut+1" or "Projected Cut +1" or "Projected Cut: E"
+              const match = rowText.match(/cut\s*[:\s]*([+-]?\d+|e)/i);
+              if (match) {
+                foundCutLine = match[1].toUpperCase();
+                // Add + sign if it's a positive number without sign
+                if (/^\d+$/.test(foundCutLine)) {
+                  foundCutLine = '+' + foundCutLine;
+                }
+              }
+              break;
+            }
+          }
+          setCutLine(foundCutLine);
+          
+          // Auto-detect format based on column structure
+          // ESPN format: B=Pos, C=seed, D=Player, E=Score, F=Today, G=Thru, H=R1, I=R2, J=R3, K=R4
+          const detectFormat = () => {
+            for (let i = 1; i < Math.min(rows.length, 10); i++) {
+              const colB = rows[i]?.[1];
+              const colD = rows[i]?.[3];
+              const colH = rows[i]?.[7];
+              
+              // If column H has a round score (60-90), we have at least R1 data
+              if (colH && !isNaN(parseInt(colH)) && parseInt(colH) >= 60 && parseInt(colH) <= 90) {
+                return 'with-rounds';
+              }
+              
+              // Standard format: Column B is position (T1, T2, 1, 2, -) and Column D is name
+              if (colD && colD.includes(' ') && /[a-zA-Z]{2,}/.test(colD)) {
+                return 'thursday';
+              }
+              
+              // Pre-tournament: Column B is name (no position yet)
+              if (colB && colB.includes(' ') && /[a-zA-Z]{2,}/.test(colB)) {
+                return 'pre-tournament';
+              }
+            }
+            return 'thursday'; // Default
+          };
+          
+          const format = detectFormat();
+          
+          // Detect which round we're in based on which rounds have scores
+          // We're in round N if round N-1 is complete (has scores) but round N is not
+          let detectedRound = 1; // Default to R1
+          if (format === 'with-rounds' || format === 'thursday') {
+            // Check how many rounds have scores for most golfers
+            const checkRoundHasScores = (colIndex) => {
+              let count = 0;
+              for (let i = 1; i < Math.min(rows.length, 20); i++) {
+                const val = rows[i]?.[colIndex];
+                if (val && !isNaN(parseInt(val))) count++;
+              }
+              return count >= 10; // At least 10 golfers have scores
+            };
+            
+            const r1HasScores = checkRoundHasScores(7);  // Column H
+            const r2HasScores = checkRoundHasScores(8);  // Column I
+            const r3HasScores = checkRoundHasScores(9);  // Column J
+            const r4HasScores = checkRoundHasScores(10); // Column K
+            
+            if (r4HasScores) detectedRound = 4;
+            else if (r3HasScores) detectedRound = 4; // R3 complete, in R4
+            else if (r2HasScores) detectedRound = 3; // R2 complete, in R3
+            else if (r1HasScores) detectedRound = 2; // R1 complete, in R2
+            else detectedRound = 1; // No scores yet, in R1
+          }
+          setTournamentRound(detectedRound);
+          
+          const parsed = [];
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row.length < 3) continue;
+            
+            let pos, name, score, today, thru, r1, r2, r3, r4, isCut;
+            
+            if (format === 'pre-tournament') {
+              // B=Names, C=Tee times
+              pos = null;
+              name = row[1]?.trim();
+              score = null;
+              today = null;
+              thru = row[2]?.trim(); // Tee time
+              r1 = null; r2 = null; r3 = null; r4 = null;
+              isCut = false;
+            } else {
+              // ESPN format: B=Pos, C=seed(ignore), D=Name, E=Score, F=Today, G=Thru, H-K=R1-R4
+              const rawPos = row[1]?.trim(); // Column B
+              pos = rawPos?.replace(/[T\s"]/g, '');
+              // row[2] is seed/ranking - ignore
+              name = row[3]?.trim(); // Column D
+              score = row[4]?.trim(); // Column E
+              today = row[5]?.trim(); // Column F
+              thru = row[6]?.trim()?.replace(/\*/g, ''); // Column G - Remove asterisks
+              r1 = row[7]; // Column H
+              r2 = row[8]; // Column I
+              r3 = row[9]; // Column J
+              r4 = row[10]; // Column K
+              
+              // Check if player missed cut
+              isCut = rawPos?.toUpperCase() === 'CUT' || 
+                      rawPos?.toUpperCase() === 'MC' ||
+                      name?.toUpperCase().includes('CUT');
+              
+              // Skip header rows and cut line rows
+              if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
+              if (row.join(' ').toLowerCase().includes('projected cut')) continue;
+            }
+            
+            if (!name || name.length < 2) continue;
+            if (['PLAYER', 'NAME', 'GOLFER', 'POS', ''].includes(name.toUpperCase())) continue;
+            
+            const position = parseInt(pos) || null;
+            const rounds = [r1, r2, r3, r4].map(r => {
+              const n = parseInt(r);
+              return isNaN(n) ? null : n;
+            });
+            
+            parsed.push({ 
+              name, 
+              position, 
+              rounds, 
+              score: score || null,
+              today: today || null, 
+              thru: thru || null,
+              cut: isCut
+            });
+          }
+          
+          setLiveScores(parsed);
+          setLastFetch(new Date());
+          
+          // Auto-update scores for drafted golfers
+          if (parsed.length > 0) {
+            const allGolfers = Object.values(teams).flat();
+            const newScores = { ...scores };
+            
+            parsed.forEach(p => {
+              const match = allGolfers.find(g => namesMatch(g, p.name));
+              
+              if (match) {
+                newScores[match] = {
+                  ...newScores[match],
+                  position: p.position || newScores[match]?.position,
+                  positionDisplay: p.position ? (p.position === parseInt(p.position) ? `${p.position}` : p.position) : null,
+                  rounds: p.rounds.map((r, i) => r !== null ? r : newScores[match]?.rounds?.[i] || null),
+                  score: p.score,
+                  today: p.today,
+                  thru: p.thru,
+                  cut: p.cut || newScores[match]?.cut
+                };
+              }
+            });
+            
+            setScores(newScores);
+            saveToFirebase({ scores: newScores });
+          }
+          
+        } catch (err) {
+          setFetchError('Could not fetch scores. Check your Sheet URL.');
+          console.error(err);
+        }
+        
+        setIsFetching(false);
+      };
+      
+      // Auto-fetch every 2 minutes
+      useEffect(() => {
+        if (sheetUrl && Object.values(teams).some(t => t.length > 0)) {
+          fetchLiveScores();
+          const interval = setInterval(fetchLiveScores, 120000);
+          return () => clearInterval(interval);
+        }
+      }, [sheetUrl, Object.values(teams).flat().length]);
+
+      // Smart parser for ESPN copy/pastes
+      const parseGolferList = (rawText) => {
+        const patternsToRemove = [
+          /^\d+\.?\s*/, /^T?\d+\s+/, /\s*\(\d+\)\s*/g, /\s*\(-?\d+\)\s*/g,
+          /\s+-\d+$/, /\s+\+\d+$/, /\s+E$/, /\s+--$/, /\s+F$/,
+          /\s+\d+:\d+\s*(AM|PM)?/gi, /\s+THRU\s+\d+/gi, /\s+\d+\s+\d+\s+\d+\s+\d+/,
+          /\(a\)/gi, /\s+-+\s*$/, /^\s*-+\s*/, /\bPOS\b/gi, /\bPLAYER\b/gi,
+          /\bTODAY\b/gi, /\bTHRU\b/gi, /\bTO PAR\b/gi, /\bTOT\b/gi, /\bR\d\b/gi,
+          /\bROUND \d\b/gi, /\bTEE TIME\b/gi, /\bSCORE\b/gi, /\bOWGR\b/gi,
+          /\bFEDEX\b/gi, /\bPTS\b/gi, /\bCUT\b/gi, /\bWD\b/gi, /\bDQ\b/gi,
+          /\bMDF\b/gi, /^\s*--\s*$/, /\s{2,}/g,
+        ];
+
+        const countryCodes = /\s+(USA|ENG|NIR|SCO|IRL|AUS|RSA|JPN|KOR|SWE|NOR|ESP|FRA|GER|ITA|CAN|MEX|ARG|COL|CHI|NZL|WAL|BEL|AUT|DEN|FIN|NED|POR|CHN|TPE|THA|IND|PHI)\s*$/gi;
+        
+        let lines = rawText.split(/[\n\r\t]+/).map(line => line.trim()).filter(line => line.length > 0);
+        const golfers = [];
+        const seen = new Set();
+
+        for (let line of lines) {
+          let cleaned = line.replace(countryCodes, '');
+          for (const pattern of patternsToRemove) {
+            cleaned = cleaned.replace(pattern, ' ');
+          }
+          cleaned = cleaned.replace(/\s+/g, ' ').trim();
+          
+          if (cleaned.length < 3) continue;
+          if (/^\d+$/.test(cleaned)) continue;
+          if (/^[^a-zA-Z]*$/.test(cleaned)) continue;
+          
+          const headers = ['player', 'pos', 'score', 'today', 'thru', 'round', 'tee time', 'total', 'earnings', 'fedex', 'points'];
+          if (headers.includes(cleaned.toLowerCase())) continue;
+          
+          const nameParts = cleaned.split(' ').filter(p => p.length > 0);
+          if (nameParts.length < 2) continue;
+          
+          const alphaCount = (cleaned.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
+          if (alphaCount < cleaned.replace(/\s/g, '').length * 0.7) continue;
+          
+          const normalized = nameParts.map(part => {
+            if (part.toLowerCase().startsWith('mc')) {
+              return 'Mc' + part.charAt(2).toUpperCase() + part.slice(3).toLowerCase();
+            }
+            if (part.toLowerCase().startsWith("o'")) {
+              return "O'" + part.charAt(2).toUpperCase() + part.slice(3).toLowerCase();
+            }
+            return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+          }).join(' ');
+          
+          const key = normalized.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            golfers.push(normalized);
+          }
+        }
+        return golfers;
+      };
+
+      const handleGolferPaste = (e) => {
+        const pasted = e.target.value;
+        setGolferInput(pasted);
+        const parsed = parseGolferList(pasted);
+        if (parsed.length > 0) {
+          setParseStatus(`✓ Found ${parsed.length} golfers`);
+        } else if (pasted.trim().length > 0) {
+          setParseStatus('⚠ No golfers detected');
+        } else {
+          setParseStatus('');
+        }
+      };
+
+      // Load golfers from Google Sheet
+      const loadGolfersFromSheet = async () => {
+        if (!sheetUrl) {
+          alert('Please set up your Google Sheet URL in Settings first!');
+          setView('settings');
+          return;
+        }
+        
+        setIsFetching(true);
+        
+        try {
+          const corsProxies = [
+            (url) => url,
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+          ];
+          
+          let response;
+          for (const proxyFn of corsProxies) {
+            try {
+              response = await fetch(proxyFn(sheetUrl));
+              if (response.ok) break;
+            } catch (e) { continue; }
+          }
+          
+          if (!response || !response.ok) throw new Error('Failed to fetch');
+          
+          const text = await response.text();
+          const rows = text.split('\n').map(row => {
+            const cells = [];
+            let current = '';
+            let inQuotes = false;
+            for (let char of row) {
+              if (char === '"') { inQuotes = !inQuotes; }
+              else if (char === ',' && !inQuotes) { cells.push(current.trim().replace(/"/g, '')); current = ''; }
+              else { current += char; }
+            }
+            cells.push(current.trim().replace(/"/g, ''));
+            return cells;
+          });
+          
+          // Auto-detect format
+          const detectFormat = () => {
+            for (let i = 1; i < Math.min(rows.length, 5); i++) {
+              const colB = rows[i]?.[1];
+              const colC = rows[i]?.[2];
+              const colH = rows[i]?.[7];
+              
+              // Friday-Sunday: Column H has round scores (60-90 range)
+              if (colH && !isNaN(parseInt(colH)) && parseInt(colH) >= 60 && parseInt(colH) <= 90) {
+                return 'friday-sunday';
+              }
+              
+              // Thursday: Column B is position (number), Column C is name
+              if (colB && /^T?\d+$/.test(colB.trim()) && colC && colC.includes(' ') && /[a-zA-Z]{2,}/.test(colC)) {
+                return 'thursday';
+              }
+              
+              // Pre-tournament: Column B is name
+              if (colB && colB.includes(' ') && /[a-zA-Z]{2,}/.test(colB) && !/^\d+$/.test(colB.trim())) {
+                return 'pre-tournament';
+              }
+            }
+            return 'friday-sunday';
+          };
+          
+          const format = detectFormat();
+          // Pre-tournament: B=1, Thursday: C=2, Friday-Sunday: D=3
+          const nameColumn = format === 'pre-tournament' ? 1 : format === 'thursday' ? 2 : 3;
+          
+          const names = [];
+          for (let i = 1; i < rows.length; i++) {
+            let name = rows[i]?.[nameColumn];
+            if (name && name.length > 2) {
+              if (['PLAYER', 'NAME', 'GOLFER', ''].includes(name.toUpperCase())) continue;
+              name = name.trim().split(' ').map(p => {
+                if (p.toLowerCase().startsWith('mc')) return 'Mc' + p.charAt(2).toUpperCase() + p.slice(3).toLowerCase();
+                if (p.toLowerCase().startsWith("o'")) return "O'" + p.charAt(2).toUpperCase() + p.slice(3).toLowerCase();
+                return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+              }).join(' ');
+              if (!names.includes(name)) names.push(name);
+            }
+          }
+          
+          if (names.length > 0) {
+            setGolferInput(names.join('\n'));
+            setParseStatus(`✓ Loaded ${names.length} golfers from Google Sheet`);
+          } else {
+            alert('Could not find golfer names.');
+          }
+        } catch (err) {
+          alert('Error loading from Google Sheet.');
+          console.error(err);
+        }
+        setIsFetching(false);
+      };
+
+      const getTeamRoundTotal = (player, roundIndex) => {
+        const golfers = teams[player] || [];
+        const roundScores = golfers
+          .map(g => getGolferScoreFromScores(scores, g)?.rounds?.[roundIndex])
+          .filter(s => s !== null && s !== undefined)
+          .sort((a, b) => a - b);
+        if (roundScores.length === 0) return null;
+        
+        // R1 & R2 (index 0, 1): use all 8 golfers
+        // R3 & R4 (index 2, 3): use best 5 of 8 (after cut)
+        const countToUse = roundIndex <= 1 ? roundScores.length : Math.min(5, roundScores.length);
+        const scoresToSum = roundScores.slice(0, countToUse);
+        return scoresToSum.reduce((sum, s) => sum + s, 0);
+      };
+
+      const getDailyLowGolfer = (roundIndex) => {
+        let lowest = { golfer: null, score: Infinity, owner: null };
+        players.forEach(player => {
+          (teams[player] || []).forEach(golfer => {
+            const score = getGolferScoreFromScores(scores, golfer)?.rounds?.[roundIndex];
+            if (score !== null && score !== undefined && score < lowest.score) {
+              lowest = { golfer, score, owner: player };
+            }
+          });
+        });
+        return lowest.golfer ? lowest : null;
+      };
+
+      const getDailyLowTeam = (roundIndex) => {
+        let lowest = { player: null, total: Infinity };
+        players.forEach(player => {
+          const total = getTeamRoundTotal(player, roundIndex);
+          if (total !== null && total < lowest.total) {
+            lowest = { player, total };
+          }
+        });
+        return lowest.player ? lowest : null;
+      };
+
+      const getFinalStandings = () => {
+        const standings = players.map(player => {
+          const golfers = teams[player] || [];
+          const positions = golfers
+            .map(g => getGolferScoreFromScores(scores, g)?.position)
+            .filter(p => p !== null && p !== undefined)
+            .sort((a, b) => a - b);
+          const best5 = positions.slice(0, Math.min(5, positions.length));
+          const total = best5.reduce((sum, p) => sum + p, 0);
+          return { player, total, positions: best5 };
+        }).sort((a, b) => a.total - b.total);
+        return standings;
+      };
+
+      const calculatePayouts = (completedRounds = [false, false, false, false]) => {
+        const payouts = {};
+        players.forEach(p => payouts[p] = 0);
+        
+        // Only award daily payouts for completed rounds
+        ROUNDS.forEach((_, i) => {
+          if (!completedRounds[i]) return; // Skip incomplete rounds
+          const low = getDailyLowGolfer(i);
+          if (low) payouts[low.owner] += 30;
+        });
+        
+        ROUNDS.forEach((_, i) => {
+          if (!completedRounds[i]) return; // Skip incomplete rounds
+          const low = getDailyLowTeam(i);
+          if (low) payouts[low.player] += 30;
+        });
+        
+        // Only award champion and overall winner after tournament is over (R4 complete)
+        if (completedRounds[3]) {
+          if (champion) {
+            const owner = players.find(p => (teams[p] || []).some(g => namesMatch(g, champion)));
+            if (owner) payouts[owner] += 30;
+          }
+          
+          const standings = getFinalStandings();
+          if (standings[0] && standings[0].total > 0) {
+            payouts[standings[0].player] += 150;
+          }
+        }
+        
+        return payouts;
+      };
+
+      const updateScore = (golfer, roundIndex, value) => {
+        const newScores = {
+          ...scores,
+          [golfer]: {
+            ...scores[golfer],
+            rounds: (scores[golfer]?.rounds || [null, null, null, null]).map((r, i) => 
+              i === roundIndex ? (value === '' ? null : parseInt(value)) : r
+            )
+          }
+        };
+        setScores(newScores);
+        saveToFirebase({ scores: newScores });
+      };
+
+      const updatePosition = (golfer, value) => {
+        const newScores = {
+          ...scores,
+          [golfer]: {
+            ...scores[golfer],
+            position: value === '' ? null : parseInt(value)
+          }
+        };
+        setScores(newScores);
+        saveToFirebase({ scores: newScores });
+      };
+
+      const toggleCut = (golfer) => {
+        const newScores = {
+          ...scores,
+          [golfer]: {
+            ...scores[golfer],
+            cut: !scores[golfer]?.cut
+          }
+        };
+        setScores(newScores);
+        saveToFirebase({ scores: newScores });
+      };
+
+      const startDraft = () => {
+        const golfers = parseGolferList(golferInput);
+        if (golfers.length < players.length * ROSTER_SIZE) {
+          alert(`Need at least ${players.length * ROSTER_SIZE} golfers for the draft.`);
+          return;
+        }
+
+        const orderPlayers = draftOrderInput.split(',').map(p => p.trim().toUpperCase()).filter(p => players.includes(p));
+        if (orderPlayers.length !== players.length) {
+          alert('Draft order must include all players');
+          return;
+        }
+
+        const newTeams = {};
+        players.forEach(p => newTeams[p] = []);
+        
+        const newDraftOrder = generateSnakeOrder(orderPlayers);
+        
+        setTeams(newTeams);
+        setScores({});
+        setAvailableGolfers(golfers);
+        setDraftOrder(newDraftOrder);
+        setCurrentPick(0);
+        setDraftMode(true);
+        setView('draft');
+        
+        saveToFirebase({
+          teams: newTeams,
+          scores: {},
+          draftState: {
+            draftMode: true,
+            availableGolfers: golfers,
+            draftOrder: newDraftOrder,
+            currentPick: 0
+          }
+        });
+      };
+
+      const makePick = (golfer) => {
+        const currentPlayer = draftOrder[currentPick];
+        
+        const newTeams = {
+          ...teams,
+          [currentPlayer]: [...(teams[currentPlayer] || []), golfer]
+        };
+        
+        const newScores = {
+          ...scores,
+          [golfer]: { rounds: [null, null, null, null], position: null, cut: false }
+        };
+        
+        const newAvailable = availableGolfers.filter(g => g !== golfer);
+        const newPick = currentPick + 1;
+        const isDraftComplete = newPick >= draftOrder.length;
+        
+        setTeams(newTeams);
+        setScores(newScores);
+        setAvailableGolfers(newAvailable);
+        setSearchTerm('');
+        
+        if (isDraftComplete) {
+          setDraftMode(false);
+          setView('teams');
+          saveToFirebase({
+            teams: newTeams,
+            scores: newScores,
+            draftState: {
+              draftMode: false,
+              availableGolfers: newAvailable,
+              draftOrder: draftOrder,
+              currentPick: newPick
+            }
+          });
+        } else {
+          setCurrentPick(newPick);
+          saveToFirebase({
+            teams: newTeams,
+            scores: newScores,
+            draftState: {
+              draftMode: true,
+              availableGolfers: newAvailable,
+              draftOrder: draftOrder,
+              currentPick: newPick
+            }
+          });
+        }
+      };
+
+      const undoPick = () => {
+        if (currentPick === 0) return;
+        
+        const prevPick = currentPick - 1;
+        const prevPlayer = draftOrder[prevPick];
+        const lastPicked = teams[prevPlayer][teams[prevPlayer].length - 1];
+        
+        const newTeams = {
+          ...teams,
+          [prevPlayer]: teams[prevPlayer].slice(0, -1)
+        };
+        
+        const newAvailable = [...availableGolfers, lastPicked];
+        
+        setTeams(newTeams);
+        setAvailableGolfers(newAvailable);
+        setCurrentPick(prevPick);
+        
+        saveToFirebase({
+          teams: newTeams,
+          draftState: {
+            draftMode: true,
+            availableGolfers: newAvailable,
+            draftOrder: draftOrder,
+            currentPick: prevPick
+          }
+        });
+      };
+
+      const payouts = calculatePayouts();
+      const standings = getFinalStandings();
+
+      // Draft Setup View
+      const DraftSetupView = () => {
+        const parsedCount = parseGolferList(golferInput).length;
+        
+        const loadPreloadedField = () => {
+          const fieldText = PRELOADED_FIELD.map(g => g.name).join('\n');
+          setGolferInput(fieldText);
+          setParseStatus(`✓ Loaded ${PRELOADED_FIELD.length} golfers (sorted by odds)`);
+        };
+        
+        return (
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <h3 className="font-bold text-gray-800 mb-2">📋 Tournament Field</h3>
+              
+              <button
+                onClick={loadPreloadedField}
+                className="w-full mb-2 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all"
+              >
+                ⚡ Load PLAYERS Championship Field (123 golfers)
+              </button>
+              <p className="text-xs text-gray-500 text-center mb-3">Pre-sorted by betting odds • Source: GolfOdds.com</p>
+              
+              <button
+                onClick={loadGolfersFromSheet}
+                disabled={isFetching}
+                className="w-full mb-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all disabled:opacity-50 text-sm"
+              >
+                {isFetching ? '⏳ Loading...' : '📡 Or Load from Google Sheet'}
+              </button>
+              
+              <p className="text-sm text-gray-500 mb-2">Or paste manually:</p>
+              <textarea
+                value={golferInput}
+                onChange={handleGolferPaste}
+                placeholder="Click a button above to load golfers, or paste a list here"
+                className="w-full h-36 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500"
+              />
+              <div className="flex justify-between items-center mt-2">
+                <p className={`text-sm font-medium ${parsedCount > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  {parseStatus || `${parsedCount} golfers detected`}
+                </p>
+                {parsedCount > 0 && (
+                  <button
+                    onClick={() => {
+                      const parsed = parseGolferList(golferInput);
+                      // Show with odds if from preloaded field
+                      const preview = parsed.slice(0, 20).map(name => {
+                        const match = PRELOADED_FIELD.find(g => g.name === name);
+                        return match ? `${name} (${match.odds})` : name;
+                      });
+                      alert(`Detected golfers:\n\n${preview.join('\n')}${parsed.length > 20 ? `\n... and ${parsed.length - 20} more` : ''}`);
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Preview list →
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <h3 className="font-bold text-gray-800 mb-3">🎯 Draft Order</h3>
+              <p className="text-sm text-gray-500 mb-2">Enter names in pick order (comma-separated)</p>
+              <input
+                type="text"
+                defaultValue={draftOrderInput}
+                onBlur={(e) => setDraftOrderInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+              />
+              <div className="mt-3">
+                <button
+                  onClick={() => {
+                    const shuffled = [...players].sort(() => Math.random() - 0.5);
+                    setDraftOrderInput(shuffled.join(', '));
+                  }}
+                  className="w-full bg-gray-100 text-gray-700 font-medium py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                >
+                  🎲 Randomize
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <h3 className="font-bold text-gray-800 mb-3">🐍 Snake Draft Preview</h3>
+              <div className="text-xs text-gray-600 space-y-1">
+                {Array.from({ length: ROSTER_SIZE }, (_, round) => {
+                  const orderPlayers = draftOrderInput.split(',').map(p => p.trim());
+                  const roundOrder = round % 2 === 0 ? orderPlayers : [...orderPlayers].reverse();
+                  return (
+                    <div key={round} className="flex gap-1">
+                      <span className="w-8 font-bold text-gray-400">R{round + 1}:</span>
+                      <span>{roundOrder.join(' → ')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={startDraft}
+              disabled={parsedCount < players.length * ROSTER_SIZE}
+              className={`w-full font-bold py-3 rounded-xl shadow-lg transition-all ${
+                parsedCount >= players.length * ROSTER_SIZE
+                  ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-700 hover:to-emerald-800'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {parsedCount >= players.length * ROSTER_SIZE 
+                ? `🚀 Start Draft (${parsedCount} golfers ready)`
+                : `Need ${players.length * ROSTER_SIZE - parsedCount} more golfers`}
+            </button>
+          </div>
+        );
+      };
+
+      // Live Draft View
+      const DraftView = () => {
+        const currentPlayer = draftOrder[currentPick];
+        const pickRound = Math.floor(currentPick / players.length) + 1;
+        const pickInRound = (currentPick % players.length) + 1;
+        const searchInputRef = useRef(null);
+        const [localSearch, setLocalSearch] = useState(searchTerm);
+        
+        const filteredGolfers = availableGolfers.filter(g => 
+          g.toLowerCase().includes(localSearch.toLowerCase())
+        );
+
+        return (
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 text-white shadow-lg">
+              <div className="text-sm opacity-80">Round {pickRound}, Pick {pickInRound}</div>
+              <div className="text-2xl font-bold">{currentPlayer}'s Pick</div>
+              <div className="text-sm opacity-80 mt-1">Pick {currentPick + 1} of {draftOrder.length}</div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {players.map(p => (
+                <div key={p} className={`rounded-lg p-2 text-center text-xs ${
+                  p === currentPlayer ? 'bg-amber-100 border-2 border-amber-400' : 'bg-gray-100'
+                }`}>
+                  <div className="font-bold truncate">{p}</div>
+                  <div className="text-gray-500">{teams[p]?.length || 0}/{ROSTER_SIZE}</div>
+                </div>
+              ))}
+            </div>
+
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search golfers..."
+              className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-500"
+            />
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="max-h-64 overflow-y-auto">
+                {filteredGolfers.map(golfer => {
+                  const oddsMatch = PRELOADED_FIELD.find(g => g.name === golfer);
+                  return (
+                    <button
+                      key={golfer}
+                      onClick={() => { setLocalSearch(''); makePick(golfer); }}
+                      className="w-full text-left px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-emerald-50 transition-colors flex items-center justify-between"
+                    >
+                      <span className="font-medium text-gray-700">{golfer}</span>
+                      <div className="flex items-center gap-3">
+                        {oddsMatch && <span className="text-xs text-gray-400">{oddsMatch.odds}</span>}
+                        <span className="text-emerald-600 text-sm">Select →</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {currentPick > 0 && (
+              <button
+                onClick={undoPick}
+                className="w-full bg-gray-100 text-gray-600 font-medium py-2 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                ↩ Undo Last Pick
+              </button>
+            )}
+          </div>
+        );
+      };
+
+      // Dashboard View
+      const DashboardView = () => {
+        const hasTeams = Object.values(teams).some(t => t.length > 0);
+        
+        if (!hasTeams) {
+          return (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🏌️</div>
+              <h2 className="text-xl font-bold text-gray-700 mb-2">No Teams Yet</h2>
+              <p className="text-gray-500 mb-6">Start a draft to build your teams!</p>
+              <button
+                onClick={() => setView('draft-setup')}
+                className="bg-emerald-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-emerald-700 transition-colors"
+              >
+                🚀 Start New Draft
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-6">
+            {/* Cut Line Alert during R2 */}
+            {cutLine && tournamentRound === 2 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
+                <span className="text-amber-600">✂️</span>
+                <span className="text-amber-800 font-medium">Projected Cut: {cutLine}</span>
+              </div>
+            )}
+            
+            {/* Live Score Status */}
+            <div className="flex items-center justify-between bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+              <div className="text-sm">
+                {isFetching ? (
+                  <span className="text-blue-600">⏳ Updating scores...</span>
+                ) : lastFetch ? (
+                  <span className="text-gray-600">Updated: {lastFetch.toLocaleTimeString()}</span>
+                ) : (
+                  <span className="text-gray-400">Live scores connected</span>
+                )}
+              </div>
+              <button
+                onClick={fetchLiveScores}
+                disabled={isFetching}
+                className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-200 transition-colors disabled:opacity-50"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {ROUNDS.map((round, i) => {
+                const lowGolfer = getDailyLowGolfer(i);
+                const lowTeam = getDailyLowTeam(i);
+                
+                // Round is complete when all golfers have ANY value in that round column
+                const isComplete = liveScores.length > 0 && liveScores.every(g => {
+                  const roundScore = g.rounds?.[i];
+                  return roundScore !== null && roundScore !== undefined;
+                });
+                
+                const isInProgress = !isComplete && (i + 1) === tournamentRound;
+                const isUpcoming = (i + 1) > tournamentRound;
+                
+                return (
+                  <div key={round} className={`rounded-xl p-4 shadow-sm border ${
+                    isComplete ? 'bg-emerald-50 border-emerald-200' :
+                    isInProgress ? 'bg-amber-50 border-amber-200' :
+                    'bg-white border-gray-100'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500 font-medium">{round}</span>
+                      {isComplete && <span className="text-xs text-emerald-600 font-medium">✓ Final</span>}
+                      {isInProgress && <span className="text-xs text-amber-600 font-medium">● Live</span>}
+                    </div>
+                    {isUpcoming ? (
+                      <div className="text-sm text-gray-400">Upcoming</div>
+                    ) : (
+                      <>
+                        <div className="text-sm">
+                          <span className="text-gray-600">Low:</span>{' '}
+                          <span className="font-semibold text-emerald-600">{lowGolfer ? `${lowGolfer.score}` : '—'}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">{lowGolfer ? `${lowGolfer.golfer} (${lowGolfer.owner})` : ''}</div>
+                        <div className="text-xs text-gray-500 mt-1">Team: {lowTeam ? `${lowTeam.player} (${lowTeam.total})` : '—'}</div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Today's Leaders - Top 8 lowest scores for current round */}
+            {tournamentRound > 0 && liveScores.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
+                  <h2 className="text-white font-bold">📊 Today's Leaders (Round {tournamentRound})</h2>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {(() => {
+                    // Build lookup for which team owns each golfer
+                    const golferOwners = {};
+                    players.forEach(player => {
+                      (teams[player] || []).forEach(golfer => {
+                        golferOwners[golfer.toLowerCase()] = player;
+                      });
+                    });
+                    
+                    const TEAM_COLORS_LOCAL = {
+                      ROBERTS: { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', dot: 'bg-purple-500' },
+                      CRAIG: { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', dot: 'bg-orange-500' },
+                      SIEVE: { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+                      WEILER: { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', dot: 'bg-blue-500' },
+                      PALMER: { bg: 'bg-teal-100', border: 'border-teal-400', text: 'text-teal-700', dot: 'bg-teal-500' },
+                      RED: { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-700', dot: 'bg-red-500' },
+                    };
+                    
+                    // Sort by today's score and get top 8
+                    const todayLeaders = [...liveScores]
+                      .filter(g => g.today && g.today !== '-' && g.today !== '')
+                      .sort((a, b) => {
+                        const scoreA = a.today === 'E' ? 0 : parseInt(a.today);
+                        const scoreB = b.today === 'E' ? 0 : parseInt(b.today);
+                        return scoreA - scoreB;
+                      })
+                      .slice(0, 8);
+                    
+                    return todayLeaders.map((golfer, i) => {
+                      const ownerKey = Object.keys(golferOwners).find(key => namesMatch(golfer.name, key));
+                      const owner = ownerKey ? golferOwners[ownerKey] : null;
+                      const colors = owner ? TEAM_COLORS_LOCAL[owner] : null;
+                      
+                      return (
+                        <div 
+                          key={golfer.name} 
+                          className={`flex items-center justify-between px-4 py-2 ${colors ? colors.bg + ' border-l-4 ' + colors.border : ''}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 w-4">{i + 1}.</span>
+                            {colors && <div className={`w-2 h-2 rounded-full ${colors.dot}`} />}
+                            <span className={`font-medium text-sm ${colors ? colors.text : 'text-gray-700'}`}>
+                              {golfer.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className={`text-sm font-bold ${
+                              golfer.today?.startsWith('-') ? 'text-red-600' :
+                              golfer.today?.startsWith('+') ? 'text-blue-600' :
+                              golfer.today === 'E' ? 'text-gray-600' :
+                              'text-gray-400'
+                            }`}>
+                              {golfer.today}
+                            </span>
+                            <span className="text-xs text-gray-500 w-12 text-right">
+                              {golfer.thru || '—'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-3">
+                <h2 className="text-white font-bold">Team Standings</h2>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {standings.map((s, i) => (
+                  <div key={s.player} className={`flex items-center justify-between px-4 py-3 ${i === 0 ? 'bg-amber-50' : ''}`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500 w-4">{i + 1}.</span>
+                      <span className="font-semibold text-gray-800">{s.player}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-800">{s.total || '—'}</div>
+                      <div className="text-xs text-gray-500">pos total</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3">
+                <h2 className="text-white font-bold">💰 Payouts</h2>
+              </div>
+              
+              {/* Check if any rounds are complete (have final scores) */}
+              {(() => {
+                // A round is complete when all golfers have ANY value in that round column
+                // (even a "4" for WD after one hole counts as complete)
+                const isRoundComplete = (roundIndex) => {
+                  if (liveScores.length === 0) return false;
+                  
+                  // Check if all golfers have a value (not null/undefined) for this round
+                  const allHaveValue = liveScores.every(g => {
+                    const roundScore = g.rounds?.[roundIndex];
+                    return roundScore !== null && roundScore !== undefined;
+                  });
+                  
+                  return allHaveValue;
+                };
+                
+                const completedRounds = ROUNDS.map((_, i) => isRoundComplete(i));
+                const anyComplete = completedRounds.some(c => c);
+                const tournamentOver = completedRounds[3]; // R4 complete
+                
+                // Recalculate payouts with completed rounds info
+                const currentPayouts = calculatePayouts(completedRounds);
+                
+                if (!anyComplete) {
+                  return (
+                    <div className="px-4 py-8 text-center">
+                      <div className="text-4xl mb-2">⏳</div>
+                      <div className="text-gray-500">Payouts will appear after rounds complete</div>
+                      <div className="text-xs text-gray-400 mt-1">Round {tournamentRound} in progress...</div>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="divide-y divide-gray-100">
+                    {/* Daily Winners */}
+                    <div className="px-4 py-3">
+                      <div className="text-xs text-gray-500 font-medium mb-2">DAILY WINNERS ($30 each)</div>
+                      {ROUNDS.map((round, i) => {
+                        if (!completedRounds[i]) return null;
+                        const lowGolfer = getDailyLowGolfer(i);
+                        const lowTeam = getDailyLowTeam(i);
+                        return (
+                          <div key={round} className="text-sm mb-2">
+                            <div className="font-medium text-gray-700">{round}:</div>
+                            <div className="ml-3 text-gray-600">
+                              🏌️ Low Golfer: {lowGolfer ? `${lowGolfer.golfer} (${lowGolfer.score}) → ${lowGolfer.owner}` : '—'}
+                            </div>
+                            <div className="ml-3 text-gray-600">
+                              👥 Low Team: {lowTeam ? `${lowTeam.player} (${lowTeam.total})` : '—'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Tournament Winner - only if R4 complete */}
+                    {tournamentOver && (
+                      <div className="px-4 py-3">
+                        <div className="text-xs text-gray-500 font-medium mb-2">TOURNAMENT WINNER</div>
+                        <div className="text-sm">
+                          🏆 Champion Bonus ($30): {champion ? `${champion} → ${players.find(p => (teams[p] || []).some(g => namesMatch(g, champion))) || '—'}` : 'TBD'}
+                        </div>
+                        <div className="text-sm mt-1">
+                          🥇 Overall Winner ($150): {standings[0]?.player || 'TBD'}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Current Totals - only show positive winnings */}
+                    <div className="px-4 py-3">
+                      <div className="text-xs text-gray-500 font-medium mb-2">CURRENT TOTALS</div>
+                      {players.map(player => {
+                        const winnings = currentPayouts[player];
+                        if (winnings <= 0) return (
+                          <div key={player} className="flex items-center justify-between py-1">
+                            <span className="font-medium text-gray-700">{player}</span>
+                            <span className="text-gray-400">$0</span>
+                          </div>
+                        );
+                        return (
+                          <div key={player} className="flex items-center justify-between py-1">
+                            <span className="font-medium text-gray-700">{player}</span>
+                            <span className="font-bold text-green-600">${winnings}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        );
+      };
+
+      // Teams View
+      const TeamsView = () => {
+        const [replacingGolfer, setReplacingGolfer] = useState(null); // {player, golfer} being replaced
+        
+        // Helper to find score data with fuzzy name matching
+        const getGolferScore = (golferName) => getGolferScoreFromScores(scores, golferName);
+        
+        // Get list of all drafted golfers
+        const allDraftedGolfers = players.flatMap(p => teams[p] || []);
+        
+        // Get available golfers (from preloaded field + liveScores, minus already drafted)
+        const availableGolfers = [
+          ...PRELOADED_FIELD.map(g => g.name),
+          ...liveScores.map(g => g.name)
+        ].filter((name, index, self) => 
+          self.findIndex(n => namesMatch(n, name)) === index && // unique
+          !allDraftedGolfers.some(drafted => namesMatch(drafted, name)) // not drafted
+        ).sort();
+        
+        // Helper to check if golfer is in cut danger
+        const isInCutDanger = (golferData) => {
+          if (!cutLine || !golferData?.score) return false;
+          const cutNum = cutLine === 'E' ? 0 : parseInt(cutLine);
+          const scoreNum = golferData.score === 'E' ? 0 : parseInt(golferData.score);
+          if (isNaN(cutNum) || isNaN(scoreNum)) return false;
+          return scoreNum >= cutNum;
+        };
+        
+        const handleReplaceGolfer = (player, oldGolfer, newGolfer) => {
+          if (!newGolfer) return;
+          
+          const newTeams = {
+            ...teams,
+            [player]: (teams[player] || []).map(g => g === oldGolfer ? newGolfer : g)
+          };
+          
+          // Move scores from old golfer to new golfer if any
+          const newScores = { ...scores };
+          delete newScores[oldGolfer];
+          
+          setTeams(newTeams);
+          setScores(newScores);
+          setReplacingGolfer(null);
+          setEditingTeam(null);
+          saveToFirebase({ teams: newTeams, scores: newScores });
+        };
+        
+        const handleAddGolfer = (player, newGolfer) => {
+          if (!newGolfer) return;
+          
+          const newTeams = {
+            ...teams,
+            [player]: [...(teams[player] || []), newGolfer]
+          };
+          
+          setTeams(newTeams);
+          setEditingTeam(null);
+          saveToFirebase({ teams: newTeams });
+        };
+        
+        const handleDeleteGolfer = (player, golferToDelete) => {
+          if (!confirm(`Remove ${golferToDelete} from ${player}'s team?`)) return;
+          
+          const newTeams = {
+            ...teams,
+            [player]: (teams[player] || []).filter(g => g !== golferToDelete)
+          };
+          
+          setTeams(newTeams);
+          saveToFirebase({ teams: newTeams });
+        };
+        
+        return (
+          <div className="space-y-4">
+            {/* Cut Line Alert during R2 */}
+            {cutLine && tournamentRound === 2 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
+                <span className="text-amber-600">✂️</span>
+                <span className="text-amber-800 font-medium">Projected Cut: {cutLine}</span>
+              </div>
+            )}
+            
+            {players.map(player => {
+              const teamRounds = ROUNDS.map((_, i) => getTeamRoundTotal(player, i));
+              const teamGolfers = teams[player] || [];
+              const isEditing = editingTeam === player;
+              
+              return (
+                <div key={player} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-white font-bold">{player}</h3>
+                      <button
+                        onClick={() => {
+                          setEditingTeam(isEditing ? null : player);
+                          setReplacingGolfer(null);
+                        }}
+                        className={`text-xs px-2 py-0.5 rounded ${isEditing ? 'bg-amber-400 text-amber-900' : 'bg-white/20 text-white hover:bg-white/30'}`}
+                      >
+                        {isEditing ? '✓ Done' : '✏️ Edit'}
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      {teamRounds.map((total, i) => (
+                        <span key={i} className="text-xs bg-white/20 text-white px-2 py-1 rounded">R{i+1}: {total || '—'}</span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Column Headers */}
+                  <div className="grid grid-cols-12 gap-1 px-2 sm:px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 border-b border-gray-100">
+                    <div className="col-span-3">Golfer</div>
+                    <div className="col-span-1 text-center">Pos</div>
+                    <div className="col-span-1 text-center">Score</div>
+                    <div className="col-span-1 text-center">Today</div>
+                    <div className="col-span-1 text-center">Thru</div>
+                    <div className="col-span-1 text-center">R1</div>
+                    <div className="col-span-1 text-center">R2</div>
+                    <div className="col-span-1 text-center">R3</div>
+                    <div className="col-span-1 text-center">R4</div>
+                  </div>
+                  
+                  <div className="divide-y divide-gray-50">
+                    {teamGolfers.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-gray-400">No golfers drafted</div>
+                    ) : (
+                      teamGolfers.map(golfer => {
+                        const golferData = getGolferScore(golfer);
+                        const inDanger = isInCutDanger(golferData);
+                        const isCut = golferData?.cut;
+                        const isBeingReplaced = replacingGolfer?.player === player && replacingGolfer?.golfer === golfer;
+                        
+                        // Show replacement dropdown if this golfer is being replaced
+                        if (isBeingReplaced) {
+                          return (
+                            <div key={golfer} className="px-4 py-3 bg-amber-50 border-l-4 border-amber-400">
+                              <div className="text-sm text-gray-600 mb-2">
+                                Replace <strong>{golfer}</strong> with:
+                              </div>
+                              <div className="flex gap-2">
+                                <select
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+                                  defaultValue=""
+                                  onChange={(e) => handleReplaceGolfer(player, golfer, e.target.value)}
+                                >
+                                  <option value="">Select a golfer...</option>
+                                  {availableGolfers.map(g => (
+                                    <option key={g} value={g}>{g}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => setReplacingGolfer(null)}
+                                  className="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-300"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <div 
+                            key={golfer} 
+                            className={`grid grid-cols-12 gap-1 px-2 sm:px-4 py-2 items-center ${
+                              isCut ? 'bg-red-50 opacity-60' : 
+                              inDanger ? 'bg-amber-50' : ''
+                            }`}
+                          >
+                            <div className="col-span-3 flex items-center gap-1 sm:gap-2">
+                              {isEditing && !isCut && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteGolfer(player, golfer);
+                                  }}
+                                  className="text-red-500 hover:text-red-700 text-xs"
+                                  title="Remove golfer"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                              <span className={`font-medium text-xs sm:text-sm ${isCut ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                {golfer}
+                              </span>
+                              {isCut && <span className="ml-1 text-xs text-red-500 font-medium">CUT</span>}
+                            </div>
+                            <div className="col-span-1 text-center">
+                              {golferData?.position ? (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 px-1 sm:px-1.5 py-0.5 rounded-full font-medium">
+                                  {golferData.position}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </div>
+                            <div className="col-span-1 text-center">
+                              <span className={`text-xs sm:text-sm font-bold ${
+                                golferData?.score?.startsWith('-') ? 'text-red-600' :
+                                golferData?.score?.startsWith('+') ? 'text-blue-600' :
+                                golferData?.score === 'E' ? 'text-gray-600' :
+                                'text-gray-400'
+                              }`}>
+                                {golferData?.score || '—'}
+                              </span>
+                            </div>
+                            <div className="col-span-1 text-center">
+                              <span className={`text-xs sm:text-sm font-medium ${
+                                golferData?.today?.startsWith('-') ? 'text-red-600' :
+                                golferData?.today?.startsWith('+') ? 'text-blue-600' :
+                                golferData?.today === 'E' ? 'text-gray-600' :
+                                'text-gray-400'
+                              }`}>
+                                {golferData?.today || '—'}
+                              </span>
+                            </div>
+                            <div className="col-span-1 text-center">
+                              <span className="text-xs text-gray-500">
+                                {golferData?.thru || '—'}
+                              </span>
+                            </div>
+                            {[0, 1, 2, 3].map(i => (
+                              <div key={i} className="col-span-1 text-center">
+                                <span className="text-xs sm:text-sm font-mono text-gray-600">
+                                  {golferData?.rounds?.[i] || '—'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  
+                  {/* Edit mode - delete + add */}
+                  {isEditing && (
+                    <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
+                      <div className="text-xs text-blue-600 mb-2">
+                        Tap ✕ to remove a golfer{teamGolfers.length < ROSTER_SIZE ? `, or add below (${teamGolfers.length}/${ROSTER_SIZE})` : ` (${teamGolfers.length}/${ROSTER_SIZE})`}
+                      </div>
+                      {teamGolfers.length < ROSTER_SIZE && (
+                        <select
+                          className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+                          defaultValue=""
+                          onChange={(e) => handleAddGolfer(player, e.target.value)}
+                        >
+                          <option value="">Select a golfer to add...</option>
+                          {availableGolfers.map(g => (
+                            <option key={g} value={g}>{g}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      };
+
+      // Team colors mapping
+      const TEAM_COLORS = {
+        ROBERTS: { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', dot: 'bg-purple-500' },
+        CRAIG: { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', dot: 'bg-orange-500' },
+        SIEVE: { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+        WEILER: { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', dot: 'bg-blue-500' },
+        PALMER: { bg: 'bg-teal-100', border: 'border-teal-400', text: 'text-teal-700', dot: 'bg-teal-500' },
+        RED: { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-700', dot: 'bg-red-500' },
+      };
+
+      // Leaderboard View (renamed from ScoresView)
+      const ScoresView = () => {
+        // Build lookup for which team owns each golfer
+        const golferOwners = {};
+        players.forEach(player => {
+          (teams[player] || []).forEach(golfer => {
+            golferOwners[golfer.toLowerCase()] = player;
+          });
+        });
+        
+        // Sort liveScores by position (nulls at bottom)
+        const sortedGolfers = [...liveScores].sort((a, b) => {
+          if (a.position === null && b.position === null) return 0;
+          if (a.position === null) return 1;
+          if (b.position === null) return -1;
+          return a.position - b.position;
+        });
+        
+        if (sortedGolfers.length === 0) {
+          return (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📊</div>
+              <h2 className="text-xl font-bold text-gray-700 mb-2">No Leaderboard Data</h2>
+              <p className="text-gray-500">Waiting for live scores from ESPN...</p>
+              <button
+                onClick={fetchLiveScores}
+                className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
+              >
+                🔄 Refresh Scores
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-3">
+            {/* Legend */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3">
+              <div className="text-xs text-gray-500 mb-2 font-medium">TEAM COLORS</div>
+              <div className="flex flex-wrap gap-2">
+                {players.map(player => {
+                  const colors = TEAM_COLORS[player] || { dot: 'bg-gray-400', text: 'text-gray-600' };
+                  return (
+                    <div key={player} className="flex items-center gap-1.5">
+                      <div className={`w-3 h-3 rounded-full ${colors.dot}`}></div>
+                      <span className={`text-xs font-medium ${colors.text}`}>{player}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Cut Line Alert */}
+            {cutLine && tournamentRound === 2 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
+                <span className="text-amber-600">✂️</span>
+                <span className="text-amber-800 font-medium">Projected Cut: {cutLine}</span>
+              </div>
+            )}
+            
+            {/* Leaderboard */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-3 flex items-center justify-between">
+                <h2 className="text-white font-bold">Tournament Leaderboard</h2>
+                <button
+                  onClick={fetchLiveScores}
+                  disabled={isFetching}
+                  className="px-2 py-1 bg-white/20 text-white rounded text-xs font-medium hover:bg-white/30 disabled:opacity-50"
+                >
+                  {isFetching ? '...' : '🔄'}
+                </button>
+              </div>
+              
+              {/* Column Headers */}
+              <div className="grid grid-cols-12 gap-1 px-3 py-2 bg-gray-50 text-xs font-medium text-gray-500 border-b border-gray-100 sticky top-0">
+                <div className="col-span-1 text-center">Pos</div>
+                <div className="col-span-4">Player</div>
+                <div className="col-span-1 text-center">Score</div>
+                <div className="col-span-2 text-center">Thru</div>
+                <div className="col-span-1 text-center">R1</div>
+                <div className="col-span-1 text-center">R2</div>
+                <div className="col-span-1 text-center">R3</div>
+                <div className="col-span-1 text-center">R4</div>
+              </div>
+              
+              <div className="max-h-[60vh] overflow-y-auto">
+                {sortedGolfers.map((golfer, idx) => {
+                  // Find owner by matching names (handles diacritics)
+                  const ownerKey = Object.keys(golferOwners).find(key => namesMatch(golfer.name, key));
+                  const owner = ownerKey ? golferOwners[ownerKey] : null;
+                  const colors = owner ? TEAM_COLORS[owner] : null;
+                  const isDrafted = !!owner;
+                  const isCut = golfer.cut;
+                  
+                  return (
+                    <div 
+                      key={`${golfer.name}-${idx}`}
+                      className={`grid grid-cols-12 gap-1 px-3 py-2 items-center border-b border-gray-50 last:border-0 ${
+                        isCut ? 'bg-red-50 opacity-50' :
+                        isDrafted ? `${colors.bg} border-l-4 ${colors.border}` : 
+                        'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="col-span-1 text-center">
+                        <span className={`text-xs font-medium ${golfer.position ? 'text-gray-700' : 'text-gray-400'}`}>
+                          {golfer.position ? `${golfer.position}` : '—'}
+                        </span>
+                      </div>
+                      <div className="col-span-4 flex items-center gap-2">
+                        {isDrafted && (
+                          <div className={`w-2.5 h-2.5 rounded-full ${colors.dot} flex-shrink-0`}></div>
+                        )}
+                        <span className={`text-sm truncate ${
+                          isCut ? 'line-through text-gray-400' :
+                          isDrafted ? `font-semibold ${colors.text}` : 
+                          'text-gray-600'
+                        }`}>
+                          {golfer.name}
+                        </span>
+                        {isCut && <span className="text-xs text-red-500 font-medium">CUT</span>}
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <span className={`text-sm font-medium ${
+                          golfer.score?.startsWith('-') ? 'text-red-600' :
+                          golfer.score?.startsWith('+') ? 'text-blue-600' :
+                          golfer.score === 'E' ? 'text-gray-700' :
+                          'text-gray-400'
+                        }`}>
+                          {golfer.score || '—'}
+                        </span>
+                      </div>
+                      <div className="col-span-2 text-center">
+                        <span className="text-xs text-gray-500">
+                          {golfer.thru || '—'}
+                        </span>
+                      </div>
+                      {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="col-span-1 text-center">
+                          <span className="text-xs font-mono text-gray-500">
+                            {golfer.rounds?.[i] || '—'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Last updated */}
+            {lastFetch && (
+              <div className="text-center text-xs text-gray-400">
+                Last updated: {lastFetch.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // Settings View
+      const SettingsView = () => (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <h3 className="font-bold text-gray-800 mb-3">Tournament</h3>
+            <input
+              type="text"
+              defaultValue={tournamentName}
+              onBlur={(e) => {
+                setTournamentName(e.target.value);
+                saveToFirebase({ tournamentName: e.target.value });
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
+              placeholder="Enter tournament name..."
+            />
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <h3 className="font-bold text-gray-800 mb-3">Champion</h3>
+            <select
+              value={champion || ''}
+              onChange={(e) => {
+                const val = e.target.value || null;
+                setChampion(val);
+                saveToFirebase({ champion: val });
+              }}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">Select tournament winner...</option>
+              {Object.values(teams).flat().sort().map(golfer => (
+                <option key={golfer} value={golfer}>{golfer}</option>
+              ))}
+            </select>
+            {champion && (
+              <p className="text-sm text-emerald-600 mt-2">
+                🏆 {champion} — Owner: {players.find(p => (teams[p] || []).includes(champion))}
+              </p>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <h3 className="font-bold text-gray-800 mb-3">Prize Pool Breakdown</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span>Entry Fee:</span><span className="font-mono">$70</span></div>
+              <div className="flex justify-between"><span>Total Pool:</span><span className="font-mono">${ENTRY_FEE * players.length}</span></div>
+              <div className="border-t border-gray-100 pt-2 mt-2">
+                <div className="flex justify-between"><span>Solo Low (×4 rounds):</span><span className="font-mono">$120</span></div>
+                <div className="flex justify-between"><span>Team Low (×4 rounds):</span><span className="font-mono">$120</span></div>
+                <div className="flex justify-between"><span>Champion Bonus:</span><span className="font-mono">$30</span></div>
+                <div className="flex justify-between"><span>Overall Winner:</span><span className="font-mono">$150</span></div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setView('draft-setup')}
+            className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-emerald-700 transition-colors"
+          >
+            🏌️ Start New Draft
+          </button>
+
+          <button 
+            onClick={() => {
+              if (confirm('Clear all data? This cannot be undone.')) {
+                const newTeams = {};
+                players.forEach(p => newTeams[p] = []);
+                setTeams(newTeams);
+                setScores({});
+                setChampion(null);
+                setDraftMode(false);
+                database.ref('game').remove();
+              }
+            }}
+            className="w-full bg-red-50 text-red-600 font-medium py-2 rounded-lg hover:bg-red-100 transition-colors"
+          >
+            Reset Everything
+          </button>
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 text-white px-4 py-4 shadow-lg">
+            <div className="max-w-3xl mx-auto flex justify-between items-center">
+              <div>
+                <h1 className="text-xl font-bold">🏌️ Major Droppers</h1>
+                <p className="text-emerald-200 text-sm">{tournamentName}</p>
+              </div>
+              <div className={`w-3 h-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} title={connected ? 'Connected' : 'Disconnected'} />
+            </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto px-2 sm:px-4 py-4 pb-24">
+            {syncing ? (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4">⏳</div>
+                <p className="text-gray-500">Syncing with server...</p>
+              </div>
+            ) : (
+              <>
+                {view === 'dashboard' && <DashboardView />}
+                {view === 'teams' && <TeamsView />}
+                {view === 'scores' && <ScoresView />}
+                {view === 'settings' && <SettingsView />}
+                {view === 'draft-setup' && <DraftSetupView />}
+                {view === 'draft' && draftMode && <DraftView />}
+              </>
+            )}
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 shadow-lg">
+            <div className="max-w-3xl mx-auto flex justify-around">
+              {[
+                { id: 'dashboard', label: 'Home', icon: '📊' },
+                { id: 'teams', label: 'Teams', icon: '👥' },
+                { id: 'scores', label: 'Leaderboard', icon: '🏆' },
+                { id: 'settings', label: 'More', icon: '⚙️' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (!draftMode || tab.id === 'settings') setView(tab.id);
+                  }}
+                  className={`flex flex-col items-center py-1 px-4 rounded-lg transition-colors ${
+                    view === tab.id ? 'text-emerald-700' : draftMode && tab.id !== 'settings' ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <span className="text-xl">{tab.icon}</span>
+                  <span className="text-xs font-medium">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<MajorDroppers />, document.getElementById('root'));
+  </script>
+</body>
+</html>

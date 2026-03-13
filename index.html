@@ -306,30 +306,17 @@
         setFetchError('');
         
         try {
-          // Skip direct fetch (CORS blocks it), go straight to proxies
+          // Try direct fetch first, then proxies as fallback
           const corsProxies = [
+            (url) => url,
             (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
             (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
           ];
           
-          // Helper to fetch with timeout
-          const fetchWithTimeout = async (url, timeoutMs = 3000) => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-            try {
-              const response = await fetch(url, { signal: controller.signal });
-              clearTimeout(timeoutId);
-              return response;
-            } catch (e) {
-              clearTimeout(timeoutId);
-              throw e;
-            }
-          };
-          
           let response;
           for (const proxyFn of corsProxies) {
             try {
-              response = await fetchWithTimeout(proxyFn(sheetUrl), 3000);
+              response = await fetch(proxyFn(sheetUrl));
               if (response.ok) break;
             } catch (e) {
               continue;
@@ -407,30 +394,38 @@
           
           const format = detectFormat();
           
-          // Detect which round we're in based on which rounds have scores
-          // We're in round N if round N-1 is complete (has scores) but round N is not
+          // Detect which round we're in based on which rounds are COMPLETE
+          // A round is complete when ALL golfers have a score for that round
           let detectedRound = 1; // Default to R1
           if (format === 'with-rounds' || format === 'thursday') {
-            // Check how many rounds have scores for most golfers
-            const checkRoundHasScores = (colIndex) => {
-              let count = 0;
-              for (let i = 1; i < Math.min(rows.length, 20); i++) {
+            // Check if a round is complete (all golfers have scores, not just some)
+            const isRoundComplete = (colIndex) => {
+              let totalGolfers = 0;
+              let withScores = 0;
+              for (let i = 1; i < rows.length; i++) {
+                // Skip non-golfer rows (header, cut line, etc)
+                const name = rows[i]?.[3]?.trim();
+                if (!name || name.length < 2 || name.toUpperCase() === 'PLAYER') continue;
+                if (rows[i].join(' ').toLowerCase().includes('projected cut')) continue;
+                
+                totalGolfers++;
                 const val = rows[i]?.[colIndex];
-                if (val && !isNaN(parseInt(val))) count++;
+                if (val && !isNaN(parseInt(val))) withScores++;
               }
-              return count >= 10; // At least 10 golfers have scores
+              // Round is complete if all golfers have scores
+              return totalGolfers > 0 && withScores === totalGolfers;
             };
             
-            const r1HasScores = checkRoundHasScores(7);  // Column H
-            const r2HasScores = checkRoundHasScores(8);  // Column I
-            const r3HasScores = checkRoundHasScores(9);  // Column J
-            const r4HasScores = checkRoundHasScores(10); // Column K
+            const r1Complete = isRoundComplete(7);  // Column H
+            const r2Complete = isRoundComplete(8);  // Column I
+            const r3Complete = isRoundComplete(9);  // Column J
+            const r4Complete = isRoundComplete(10); // Column K
             
-            if (r4HasScores) detectedRound = 4;
-            else if (r3HasScores) detectedRound = 4; // R3 complete, in R4
-            else if (r2HasScores) detectedRound = 3; // R2 complete, in R3
-            else if (r1HasScores) detectedRound = 2; // R1 complete, in R2
-            else detectedRound = 1; // No scores yet, in R1
+            if (r4Complete) detectedRound = 4;
+            else if (r3Complete) detectedRound = 4; // R3 complete, in R4
+            else if (r2Complete) detectedRound = 3; // R2 complete, in R3
+            else if (r1Complete) detectedRound = 2; // R1 complete, in R2
+            else detectedRound = 1; // R1 not complete, in R1
           }
           setTournamentRound(detectedRound);
           

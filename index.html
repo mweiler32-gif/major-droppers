@@ -394,39 +394,16 @@
           
           const format = detectFormat();
           
-          // Detect which round we're in based on which rounds are COMPLETE
-          // A round is complete when ALL golfers have a score for that round
-          let detectedRound = 1; // Default to R1
-          if (format === 'with-rounds' || format === 'thursday') {
-            // Check if a round is complete (all golfers have scores, not just some)
-            const isRoundComplete = (colIndex) => {
-              let totalGolfers = 0;
-              let withScores = 0;
-              for (let i = 1; i < rows.length; i++) {
-                // Skip non-golfer rows (header, cut line, etc)
-                const name = rows[i]?.[3]?.trim();
-                if (!name || name.length < 2 || name.toUpperCase() === 'PLAYER') continue;
-                if (rows[i].join(' ').toLowerCase().includes('projected cut')) continue;
-                
-                totalGolfers++;
-                const val = rows[i]?.[colIndex];
-                if (val && !isNaN(parseInt(val))) withScores++;
-              }
-              // Round is complete if all golfers have scores
-              return totalGolfers > 0 && withScores === totalGolfers;
-            };
-            
-            const r1Complete = isRoundComplete(7);  // Column H
-            const r2Complete = isRoundComplete(8);  // Column I
-            const r3Complete = isRoundComplete(9);  // Column J
-            const r4Complete = isRoundComplete(10); // Column K
-            
-            if (r4Complete) detectedRound = 4;
-            else if (r3Complete) detectedRound = 4; // R3 complete, in R4
-            else if (r2Complete) detectedRound = 3; // R2 complete, in R3
-            else if (r1Complete) detectedRound = 2; // R1 complete, in R2
-            else detectedRound = 1; // R1 not complete, in R1
-          }
+          // Detect which round we're in based on day of week
+          // Thursday = R1, Friday = R2, Saturday = R3, Sunday = R4
+          const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon, ..., 4=Thu, 5=Fri, 6=Sat
+          let detectedRound = 1;
+          if (dayOfWeek === 4) detectedRound = 1;      // Thursday = R1
+          else if (dayOfWeek === 5) detectedRound = 2; // Friday = R2
+          else if (dayOfWeek === 6) detectedRound = 3; // Saturday = R3
+          else if (dayOfWeek === 0) detectedRound = 4; // Sunday = R4
+          else detectedRound = 1; // Default to R1 for other days
+          
           setTournamentRound(detectedRound);
           
           const parsed = [];

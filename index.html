@@ -761,36 +761,89 @@
         return scoresToSum.reduce((sum, s) => sum + s, 0);
       };
 
+      // Helper to get a golfer's round score from scores or liveScores
+      const getGolferRoundScore = (golfer, roundIndex) => {
+        let score = getGolferScoreFromScores(scores, golfer)?.rounds?.[roundIndex];
+        if (score === null || score === undefined) {
+          const liveMatch = liveScores.find(g => namesMatch(g.name, golfer));
+          score = liveMatch?.rounds?.[roundIndex];
+        }
+        return score;
+      };
+
       const getDailyLowGolfer = (roundIndex) => {
-        let lowest = { golfer: null, score: Infinity, owner: null };
+        // Collect all golfers with their scores
+        const candidates = [];
         players.forEach(player => {
           (teams[player] || []).forEach(golfer => {
-            // Check both scores (Firebase) and liveScores (fresh data)
-            let score = getGolferScoreFromScores(scores, golfer)?.rounds?.[roundIndex];
-            
-            // If not in scores, check liveScores
-            if (score === null || score === undefined) {
-              const liveMatch = liveScores.find(g => namesMatch(g.name, golfer));
-              score = liveMatch?.rounds?.[roundIndex];
-            }
-            
-            if (score !== null && score !== undefined && score < lowest.score) {
-              lowest = { golfer, score, owner: player };
+            const score = getGolferRoundScore(golfer, roundIndex);
+            if (score !== null && score !== undefined) {
+              candidates.push({ golfer, score, owner: player });
             }
           });
         });
-        return lowest.golfer ? lowest : null;
+        
+        if (candidates.length === 0) return null;
+        
+        // Find lowest score
+        const lowScore = Math.min(...candidates.map(c => c.score));
+        const tied = candidates.filter(c => c.score === lowScore);
+        
+        if (tied.length === 1) {
+          return tied[0];
+        }
+        
+        // Tiebreaker: lowest score in next round (R4 looks back at R3)
+        const tiebreakRound = roundIndex === 3 ? 2 : roundIndex + 1;
+        
+        let bestTiebreak = Infinity;
+        let winner = tied[0];
+        tied.forEach(c => {
+          const tiebreakScore = getGolferRoundScore(c.golfer, tiebreakRound);
+          if (tiebreakScore !== null && tiebreakScore !== undefined && tiebreakScore < bestTiebreak) {
+            bestTiebreak = tiebreakScore;
+            winner = c;
+          }
+        });
+        return winner;
       };
 
       const getDailyLowTeam = (roundIndex) => {
-        let lowest = { player: null, total: Infinity };
+        // Collect all teams with their totals
+        const candidates = [];
         players.forEach(player => {
           const total = getTeamRoundTotal(player, roundIndex);
-          if (total !== null && total < lowest.total) {
-            lowest = { player, total };
+          if (total !== null) {
+            candidates.push({ player, total });
           }
         });
-        return lowest.player ? lowest : null;
+        
+        if (candidates.length === 0) return null;
+        
+        // Find lowest total
+        const lowTotal = Math.min(...candidates.map(c => c.total));
+        const tied = candidates.filter(c => c.total === lowTotal);
+        
+        if (tied.length === 1) {
+          return tied[0];
+        }
+        
+        // Tiebreaker round: R1→R2, R2→R1, R3→R4, R4→R3
+        const tiebreakRound = roundIndex === 0 ? 1 : // R1 looks at R2
+                              roundIndex === 1 ? 0 : // R2 looks at R1
+                              roundIndex === 2 ? 3 : // R3 looks at R4
+                              2;                     // R4 looks at R3
+        
+        let bestTiebreak = Infinity;
+        let winner = tied[0];
+        tied.forEach(c => {
+          const tiebreakTotal = getTeamRoundTotal(c.player, tiebreakRound);
+          if (tiebreakTotal !== null && tiebreakTotal < bestTiebreak) {
+            bestTiebreak = tiebreakTotal;
+            winner = c;
+          }
+        });
+        return winner;
       };
 
       const getFinalStandings = () => {

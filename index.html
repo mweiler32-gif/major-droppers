@@ -1963,22 +1963,26 @@
           const completedRounds = ROUNDS.map((_, i) => isRoundComplete(i));
           const finalPayouts = calculatePayouts(completedRounds);
           
-          // Build daily winners
-          const dailyWinners = ROUNDS.map((round, i) => ({
-            round: round,
-            lowGolfer: getDailyLowGolfer(i),
-            lowTeam: getDailyLowTeam(i)
-          })).filter(d => d.lowGolfer || d.lowTeam);
+          // Build daily winners - clean up data for Firebase (no Infinity values)
+          const dailyWinners = ROUNDS.map((round, i) => {
+            const lowGolfer = getDailyLowGolfer(i);
+            const lowTeam = getDailyLowTeam(i);
+            return {
+              round: round,
+              lowGolfer: lowGolfer ? { golfer: lowGolfer.golfer, score: lowGolfer.score, owner: lowGolfer.owner } : null,
+              lowTeam: lowTeam ? { player: lowTeam.player, total: lowTeam.total } : null
+            };
+          }).filter(d => d.lowGolfer || d.lowTeam);
           
           const historyEntry = {
             name: tournamentName,
             date: new Date().toISOString(),
             teams: teams,
-            scores: scores,
-            champion: champion,
-            standings: finalStandings,
-            payouts: finalPayouts,
-            dailyWinners: dailyWinners
+            scores: scores || {},
+            champion: champion || null,
+            standings: finalStandings || [],
+            payouts: finalPayouts || {},
+            dailyWinners: dailyWinners || []
           };
           
           try {

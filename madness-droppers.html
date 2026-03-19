@@ -483,16 +483,16 @@ async function fetchBox(id){
 }
 
 function getRoundFromGame(game){
-  // Try to determine round from notes or name
+  // Try to determine round from notes - check specific round names first
   const notes = game.competitions?.[0]?.notes || [];
   for(const n of notes){
     const h = (n.headline||'').toLowerCase();
-    if(h.includes('first round')||h.includes('round of 64')) return 'R1';
-    if(h.includes('second round')||h.includes('round of 32')) return 'R2';
+    if(h.includes('1st round')||h.includes('first round')||h.includes('round of 64')) return 'R1';
+    if(h.includes('2nd round')||h.includes('second round')||h.includes('round of 32')) return 'R2';
     if(h.includes('sweet 16')||h.includes('regional semifinal')) return 'R3';
     if(h.includes('elite eight')||h.includes('regional final')) return 'R4';
     if(h.includes('final four')||h.includes('national semifinal')) return 'R5';
-    if(h.includes('championship')||h.includes('national championship')) return 'R6';
+    if(h.includes('national championship')&&!h.includes('round')) return 'R6';
   }
   // Fallback: use 2026 tournament date ranges (UTC dates)
   const d = new Date(game.date);

@@ -85,6 +85,8 @@
   .player-status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
   .player-status-dot.active{background:var(--green)}
   .player-status-dot.eliminated{background:var(--subtle)}
+  .player-status-dot.live{background:var(--green);animation:livePulse 1s infinite;box-shadow:0 0 5px var(--green)}
+  @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.5)}}
   .player-name-wrap{flex:1;min-width:0}
   .player-name-cell{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .player-name-cell.eliminated{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--subtle)}
@@ -465,8 +467,12 @@ function isSchoolEliminated(school){
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball';
 
 async function fetchGames(){
-  try{const r=await fetch(`${ESPN}/scoreboard?groups=100&limit=50`);if(!r.ok)throw 0;return(await r.json()).events||[];}
-  catch(e){return[];}
+  try{
+    const r=await fetch(`${ESPN}/scoreboard?groups=100&limit=64&seasontype=3`);
+    if(!r.ok)throw 0;
+    const data=await r.json();
+    return data.events||[];
+  }catch(e){return[];}
 }
 async function fetchBox(id){
   try{
@@ -488,15 +494,16 @@ function getRoundFromGame(game){
     if(h.includes('final four')||h.includes('national semifinal')) return 'R5';
     if(h.includes('championship')||h.includes('national championship')) return 'R6';
   }
-  // Fallback: use date ranges (approximate)
+  // Fallback: use 2026 tournament date ranges
   const d = new Date(game.date);
   const m = d.getMonth()+1, day = d.getDate();
-  if(m===3&&day<=21) return 'R1';
-  if(m===3&&day<=23) return 'R2';
-  if(m===3&&day<=28) return 'R3';
-  if(m===3&&day<=30) return 'R4';
-  if(m===4&&day<=5) return 'R5';
-  return 'R6';
+  if(m===3&&day>=19&&day<=20) return 'R1'; // First Round
+  if(m===3&&day>=21&&day<=22) return 'R2'; // Second Round
+  if(m===3&&day>=26&&day<=27) return 'R3'; // Sweet 16
+  if(m===3&&day>=28&&day<=29) return 'R4'; // Elite 8
+  if(m===4&&day===4)           return 'R5'; // Final Four
+  if(m===4&&day===6)           return 'R6'; // Championship
+  return 'R1'; // default to R1
 }
 
 async function fetchAll(){
@@ -726,7 +733,7 @@ function renderRosters(){
         }).join('');
         return`<div class="player-row">
           <div class="player-row-main" onclick="toggleRow('${mgr}',${i})">
-            <div class="player-status-dot ${isElim?'eliminated':'active'}"></div>
+            <div class="player-status-dot ${isElim?'eliminated':isLive?'live':'active'}"></div>
             <div class="player-name-wrap">
               <div class="player-name-cell ${isElim?'eliminated':''}">${parts[0]||e.display}</div>
               ${parts[1]?`<div class="player-school">${parts[1]}</div>`:''}

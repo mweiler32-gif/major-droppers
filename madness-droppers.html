@@ -294,10 +294,10 @@ const ADMIN_PIN = '9999'; // change this to your preferred admin PIN
 // The app will detect eliminations via ESPN API; this is a fallback seed list
 const TEAM_DRAFT = {
   CRAIG:   [{seed:6,name:'LOUISVILLE'},{seed:11,name:'USF'},{seed:5,name:'TEXAS TECH'},{seed:6,name:'BYU'},{seed:12,name:'AKRON'},{seed:11,name:'MIAMI OH'},{seed:6,name:'TENNESSEE'},{seed:5,name:'ST JOHN\'S'}],
-  SIEVE:   [{seed:5,name:'VANDERBILT'},{seed:5,name:'VANDERBILT'},{seed:6,name:'LOUISVILLE'},{seed:6,name:'BYU'},{seed:6,name:'BYU'},{seed:7,name:'KENTUCKY'},{seed:11,name:'MIAMI OH'},{seed:14,name:'N DAKOTA ST'}],
-  ROBERTS: [{seed:3,name:'MICHIGAN STATE'},{seed:11,name:'VCU'},{seed:5,name:'ST JOHN\'S'},{seed:6,name:'BYU'},{seed:7,name:'UCLA'},{seed:11,name:'VCU'},{seed:11,name:'SOUTH FLORIDA'},{seed:12,name:'AKRON'}],
+  SIEVE:   [{seed:5,name:'VANDERBILT'},{seed:11,name:'VCU'},{seed:6,name:'LOUISVILLE'},{seed:5,name:'NORTHERN IOWA'},{seed:6,name:'BYU'},{seed:7,name:'KENTUCKY'},{seed:11,name:'MIAMI OH'},{seed:14,name:'N DAKOTA ST'}],
+  ROBERTS: [{seed:3,name:'MICHIGAN STATE'},{seed:5,name:'VANDERBILT'},{seed:5,name:'ST JOHN\'S'},{seed:6,name:'BYU'},{seed:7,name:'UCLA'},{seed:11,name:'VCU'},{seed:11,name:'SOUTH FLORIDA'},{seed:12,name:'AKRON'}],
   PALMER:  [{seed:12,name:'AKRON'},{seed:5,name:'VANDERBILT'},{seed:6,name:'BYU'},{seed:6,name:'TENNESSEE'},{seed:4,name:'KANSAS'},{seed:3,name:'VIRGINIA'},{seed:11,name:'VCU'},{seed:11,name:'SOUTH FLORIDA'}],
-  WEILER:  [{seed:5,name:'ST JOHN\'S'},{seed:11,name:'S FLORIDA'},{seed:5,name:'VANDERBILT'},{seed:3,name:'ILLINOIS'},{seed:4,name:'ARKANSAS'},{seed:5,name:'TEXAS TECH'},{seed:13,name:'HOFSTRA'},{seed:6,name:'TENNESSEE'}],
+  WEILER:  [{seed:5,name:'ST JOHN\'S'},{seed:11,name:'SOUTH FLORIDA'},{seed:5,name:'VANDERBILT'},{seed:3,name:'ILLINOIS'},{seed:4,name:'ARKANSAS'},{seed:11,name:'TEXAS'},{seed:13,name:'HOFSTRA'},{seed:6,name:'TENNESSEE'}],
 };
 
 // Player draft with precise ESPN matching
@@ -464,7 +464,7 @@ const SCHOOL_MAP = {
   BYU:['BYU','BRIGHAM YOUNG'],VAN:['VANDERBILT','COMMODORES'],ILL:['ILLINOIS','ILLINI','FIGHTING ILLINI'],
   TENN:['TENNESSEE','VOLUNTEERS'],KU:['KANSAS','JAYHAWKS'],OSU:['OHIO STATE','BUCKEYES'],
   AKRON:['AKRON','ZIPS'],MIA:['MIAMI','HURRICANES'],TTU:['TEXAS TECH','RED RAIDERS'],
-  GONZ:['GONZAGA','BULLDOGS'],CBAP:['CAL BAPTIST','CALIFORNIA BAPTIST','LANCERS'],IOWA:['IOWA','HAWKEYES'],
+  GONZ:['GONZAGA','BULLDOGS'],CBAP:['CAL BAPTIST','CALIFORNIA BAPTIST','LANCERS'],IOWA:['IOWA','HAWKEYES'],TEXAS:['TEXAS','LONGHORNS'],
 };
 function teamMatchesSchool(teamNames, school){
   const allowed = SCHOOL_MAP[school] || [];

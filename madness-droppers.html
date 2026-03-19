@@ -444,6 +444,7 @@ function norm(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').replace
 
 function playerMatch(espnFirst, espnLast, entry){
   const eL=norm(espnLast), dL=norm(entry.last);
+  if(!eL) return false;
   const lastOk = eL===dL || (dL.length>=4&&eL.startsWith(dL.slice(0,4))) || (eL.length>=4&&dL.startsWith(eL.slice(0,4)));
   if(!lastOk) return false;
   if(entry.first){ const eF=norm(espnFirst),dF=norm(entry.first); if(!eF.startsWith(dF.slice(0,3))) return false; }
@@ -566,8 +567,10 @@ async function fetchAll(){
         const pi = keys.indexOf('points');
         if(pi < 0) continue;
         for(const ath of sg.athletes || []){
-          const fn = ath.athlete?.firstName || '';
-          const ln = ath.athlete?.lastName || '';
+          const displayName = ath.athlete?.displayName || '';
+          const nameParts = displayName.split(' ');
+          const fn = ath.athlete?.firstName || (nameParts.length>1 ? nameParts.slice(0,-1).join(' ') : '');
+          const ln = ath.athlete?.lastName || (nameParts.length>0 ? nameParts[nameParts.length-1] : '');
           const rawPts = ath.stats?.[pi];
           const pts = parseInt(rawPts) || 0;
           if(pts === 0 && !isLive) continue;

@@ -453,6 +453,25 @@ function playerMatch(espnFirst, espnLast, entry){
   return true;
 }
 
+// Map draft school codes to possible ESPN team name fragments
+const SCHOOL_MAP = {
+  DUKE:['DUKE','BLUE DEVILS'],MICH:['MICHIGAN','WOLVERINES'],HOU:['HOUSTON','COUGARS'],
+  PUR:['PURDUE','BOILERMAKERS'],FLA:['FLORIDA','GATORS'],ISU:['IOWA STATE','CYCLONES'],
+  UCONN:['UCONN','CONNECTICUT','HUSKIES'],UVA:['VIRGINIA','CAVALIERS'],NEB:['NEBRASKA','CORNHUSKERS'],
+  ARK:['ARKANSAS','RAZORBACKS'],STJ:["ST. JOHN'S","RED STORM","SAINT JOHN"],LOU:['LOUISVILLE','CARDINALS'],
+  UNC:['NORTH CAROLINA','TAR HEELS'],ARIZ:['ARIZONA','WILDCATS'],BAMA:['ALABAMA','CRIMSON TIDE'],
+  WISC:['WISCONSIN','BADGERS'],UK:['KENTUCKY','WILDCATS'],MSU:['MICHIGAN STATE','SPARTANS'],
+  BYU:['BYU','BRIGHAM YOUNG'],VAN:['VANDERBILT','COMMODORES'],ILL:['ILLINOIS','ILLINI','FIGHTING ILLINI'],
+  TENN:['TENNESSEE','VOLUNTEERS'],KU:['KANSAS','JAYHAWKS'],OSU:['OHIO STATE','BUCKEYES'],
+  AKRON:['AKRON','ZIPS'],MIA:['MIAMI','HURRICANES'],TTU:['TEXAS TECH','RED RAIDERS'],
+  GONZ:['GONZAGA','BULLDOGS'],CBAP:['CAL BAPTIST','CALIFORNIA BAPTIST','LANCERS'],IOWA:['IOWA','HAWKEYES'],
+};
+function teamMatchesSchool(teamNames, school){
+  const allowed = SCHOOL_MAP[school] || [];
+  if(allowed.length===0) return true; // unknown school, don't filter
+  return teamNames.some(n=>allowed.some(a=>n.includes(a)));
+}
+
 function isSchoolEliminated(school){
   const names = SCHOOL_TEAMS[school] || [];
   for(const n of names){
@@ -579,6 +598,14 @@ async function fetchAll(){
         const keys = sg.keys || [];
         const pi = keys.indexOf('points');
         if(pi < 0) continue;
+        const teamAbbr = (teamData.team?.abbreviation||'').toUpperCase();
+        const teamNames = [
+          (teamData.team?.abbreviation||'').toUpperCase(),
+          (teamData.team?.displayName||'').toUpperCase(),
+          (teamData.team?.shortDisplayName||'').toUpperCase(),
+          (teamData.team?.name||'').toUpperCase(),
+          (teamData.team?.location||'').toUpperCase(),
+        ];
         for(const ath of sg.athletes || []){
           const displayName = ath.athlete?.displayName || '';
           const nameParts = displayName.split(' ');
@@ -589,7 +616,7 @@ async function fetchAll(){
           if(pts === 0 && !isLive) continue;
           for(const mgr of MANAGERS){
             (DRAFT[mgr]||[]).forEach((entry,idx)=>{
-              if(playerMatch(fn,ln,entry)){
+              if(playerMatch(fn,ln,entry) && teamMatchesSchool(teamNames, entry.school)){
                 const k=`${mgr}::${idx}`;
                 if(!scores[k]) scores[k]={pts:0,live:false,roundPts:{}};
                 if(!scores[k].roundPts[round]) scores[k].roundPts[round]=0;

@@ -468,8 +468,11 @@ async function fetchGames(){
   catch(e){return[];}
 }
 async function fetchBox(id){
-  try{const r=await fetch(`${ESPN}/summary?event=${id}`);if(!r.ok)throw 0;return await r.json();}
-  catch(e){return null;}
+  try{
+    const r=await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?region=us&lang=en&contentorigin=espn&event=${id}`);
+    if(!r.ok)throw 0;
+    return await r.json();
+  }catch(e){return null;}
 }
 
 function getRoundFromGame(game){
@@ -555,16 +558,21 @@ async function fetchAll(){
     const isLive = box.header?.competitions?.[0]?.status?.type?.name==='STATUS_IN_PROGRESS';
     const round = getRoundFromGame(game);
 
-    for(const td of box.boxscore?.players||[]){
-      for(const statGroup of td.statistics||[]){
-        const pi = statGroup.keys?.indexOf('points');
-        if(pi === undefined || pi < 0) continue;
-
-        for(const ath of statGroup.athletes||[]){
-          const fn=ath.athlete?.firstName||'', ln=ath.athlete?.lastName||'';
-          const pts=parseInt(ath.stats?.[pi])||0;
-          if(pts===0&&!isLive) continue;
-
+    // ESPN boxscore.players is array of team objects, each with statistics array
+    // Each statistics entry has a keys array and athletes array with stats arrays
+    const playerTeams = box.boxscore?.players || [];
+    for(const teamData of playerTeams){
+      const statGroups = teamData.statistics || [];
+      for(const sg of statGroups){
+        const keys = sg.keys || [];
+        const pi = keys.indexOf('points');
+        if(pi < 0) continue;
+        for(const ath of sg.athletes || []){
+          const fn = ath.athlete?.firstName || '';
+          const ln = ath.athlete?.lastName || '';
+          const rawPts = ath.stats?.[pi];
+          const pts = parseInt(rawPts) || 0;
+          if(pts === 0 && !isLive) continue;
           for(const mgr of MANAGERS){
             (DRAFT[mgr]||[]).forEach((entry,idx)=>{
               if(playerMatch(fn,ln,entry)){

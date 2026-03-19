@@ -554,8 +554,13 @@ async function fetchAll(){
   S.eliminatedTeams = eliminated;
   S.activeTeams = active;
 
-  // Player scores from box scores
-  const activeGames = games.filter(g=>['STATUS_FINAL','STATUS_IN_PROGRESS','STATUS_HALFTIME'].includes(g.status?.type?.name)).slice(0,40);
+  // Player scores from box scores - tournament only (March 19+ 2026)
+  const tourneyStart = new Date('2026-03-19T00:00:00Z');
+  const activeGames = games.filter(g=>{
+    const validStatus = ['STATUS_FINAL','STATUS_IN_PROGRESS','STATUS_HALFTIME'].includes(g.status?.type?.name);
+    const afterStart = new Date(g.date) >= tourneyStart;
+    return validStatus && afterStart;
+  }).slice(0,64);
   const scores = {};
 
   for(const game of activeGames){

@@ -608,7 +608,9 @@ async function fetchAll(){
         ];
         for(const ath of sg.athletes || []){
           const displayName = ath.athlete?.displayName || '';
-          const nameParts = displayName.split(' ');
+          const suffixes = ['JR','JR.','SR','SR.','II','III','IV','V'];
+          const rawParts = displayName.split(' ');
+          const nameParts = rawParts.length > 1 && suffixes.includes(rawParts[rawParts.length-1].toUpperCase()) ? rawParts.slice(0,-1) : rawParts;
           const fn = ath.athlete?.firstName || (nameParts.length>1 ? nameParts.slice(0,-1).join(' ') : '');
           const ln = ath.athlete?.lastName || (nameParts.length>0 ? nameParts[nameParts.length-1] : '');
           const rawPts = ath.stats?.[pi];

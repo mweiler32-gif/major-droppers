@@ -555,7 +555,7 @@ async function fetchAll(){
   S.activeTeams = active;
 
   // Player scores from box scores - tournament only (March 19+ 2026)
-  const tourneyStart = new Date('2026-03-19T00:00:00Z');
+  const tourneyStart = new Date('2026-03-19T12:00:00Z'); // noon UTC = 7am Central, before any R1 tipoffs
   const activeGames = games.filter(g=>{
     const validStatus = ['STATUS_FINAL','STATUS_IN_PROGRESS','STATUS_HALFTIME'].includes(g.status?.type?.name);
     const afterStart = new Date(g.date) >= tourneyStart;

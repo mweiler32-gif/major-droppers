@@ -494,9 +494,9 @@ function getRoundFromGame(game){
     if(h.includes('final four')||h.includes('national semifinal')) return 'R5';
     if(h.includes('championship')||h.includes('national championship')) return 'R6';
   }
-  // Fallback: use 2026 tournament date ranges
+  // Fallback: use 2026 tournament date ranges (UTC dates)
   const d = new Date(game.date);
-  const m = d.getMonth()+1, day = d.getDate();
+  const m = d.getUTCMonth()+1, day = d.getUTCDate();
   if(m===3&&day>=19&&day<=20) return 'R1'; // First Round
   if(m===3&&day>=21&&day<=22) return 'R2'; // Second Round
   if(m===3&&day>=26&&day<=27) return 'R3'; // Sweet 16

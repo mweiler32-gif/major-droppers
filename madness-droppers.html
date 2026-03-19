@@ -547,15 +547,13 @@ async function fetchAll(){
   S.activeTeams = active;
 
   // Player scores from box scores
-  const activegames = games.filter(g=>['STATUS_FINAL','STATUS_IN_PROGRESS','STATUS_HALFTIME'].includes(g.status?.type?.name)).slice(0,40);
-  const boxes = await Promise.allSettled(activegames.map((g,i)=>({g,i,p:fetchBox(g.id)})).map(x=>x.p.then(b=>({b,g:activegames[x.i]}))));
-
+  const activeGames = games.filter(g=>['STATUS_FINAL','STATUS_IN_PROGRESS','STATUS_HALFTIME'].includes(g.status?.type?.name)).slice(0,40);
   const scores = {};
 
-  for(const res of boxes){
-    if(res.status!=='fulfilled'||!res.value?.b) continue;
-    const {b:box, g:game} = res.value;
-    const isLive = box.header?.competitions?.[0]?.status?.type?.name==='STATUS_IN_PROGRESS';
+  for(const game of activeGames){
+    const box = await fetchBox(game.id);
+    if(!box) continue;
+    const isLive = game.status?.type?.name==='STATUS_IN_PROGRESS'||game.status?.type?.name==='STATUS_HALFTIME';
     const round = getRoundFromGame(game);
 
     // ESPN boxscore.players is array of team objects, each with statistics array

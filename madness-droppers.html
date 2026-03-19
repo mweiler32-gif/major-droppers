@@ -503,7 +503,7 @@ function getRoundFromGame(game){
   if(m===3&&day>=28&&day<=29) return 'R4'; // Elite 8
   if(m===4&&day===4)           return 'R5'; // Final Four
   if(m===4&&day===6)           return 'R6'; // Championship
-  return 'R1'; // default to R1
+  return null; // not a recognized tournament round, skip
 }
 
 async function fetchAll(){
@@ -564,10 +564,11 @@ async function fetchAll(){
   const scores = {};
 
   for(const game of activeGames){
+    const round = getRoundFromGame(game);
+    if(!round) continue; // skip unrecognized rounds
     const box = await fetchBox(game.id);
     if(!box) continue;
     const isLive = game.status?.type?.name==='STATUS_IN_PROGRESS'||game.status?.type?.name==='STATUS_HALFTIME';
-    const round = getRoundFromGame(game);
 
     // ESPN boxscore.players is array of team objects, each with statistics array
     // Each statistics entry has a keys array and athletes array with stats arrays

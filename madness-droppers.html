@@ -556,27 +556,27 @@ async function fetchAll(){
     const round = getRoundFromGame(game);
 
     for(const td of box.boxscore?.players||[]){
-      const pg=(td.statistics||[]).find(s=>s.keys?.includes('points'));
-      if(!pg) continue;
-      const pi=pg.keys.indexOf('points'); if(pi<0) continue;
+      for(const statGroup of td.statistics||[]){
+        const pi = statGroup.keys?.indexOf('points');
+        if(pi === undefined || pi < 0) continue;
 
-      for(const ath of pg.athletes||[]){
-        const fn=ath.athlete?.firstName||'', ln=ath.athlete?.lastName||'';
-        const pts=parseInt(ath.stats?.[pi])||0;
-        if(pts===0&&!isLive) continue;
+        for(const ath of statGroup.athletes||[]){
+          const fn=ath.athlete?.firstName||'', ln=ath.athlete?.lastName||'';
+          const pts=parseInt(ath.stats?.[pi])||0;
+          if(pts===0&&!isLive) continue;
 
-        for(const mgr of MANAGERS){
-          (DRAFT[mgr]||[]).forEach((entry,idx)=>{
-            if(playerMatch(fn,ln,entry)){
-              const k=`${mgr}::${idx}`;
-              if(!scores[k]) scores[k]={pts:0,live:false,roundPts:{}};
-              // Only add points for this round if not already counted
-              if(!scores[k].roundPts[round]) scores[k].roundPts[round]=0;
-              scores[k].roundPts[round] = Math.max(scores[k].roundPts[round], pts);
-              scores[k].pts = Object.values(scores[k].roundPts).reduce((a,b)=>a+b,0);
-              if(isLive) scores[k].live=true;
-            }
-          });
+          for(const mgr of MANAGERS){
+            (DRAFT[mgr]||[]).forEach((entry,idx)=>{
+              if(playerMatch(fn,ln,entry)){
+                const k=`${mgr}::${idx}`;
+                if(!scores[k]) scores[k]={pts:0,live:false,roundPts:{}};
+                if(!scores[k].roundPts[round]) scores[k].roundPts[round]=0;
+                scores[k].roundPts[round] = Math.max(scores[k].roundPts[round], pts);
+                scores[k].pts = Object.values(scores[k].roundPts).reduce((a,b)=>a+b,0);
+                if(isLive) scores[k].live=true;
+              }
+            });
+          }
         }
       }
     }

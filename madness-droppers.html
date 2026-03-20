@@ -396,16 +396,44 @@ const DRAFT = {
 
 // School → ESPN team names for elimination tracking
 const SCHOOL_TEAMS = {
-  DUKE:['Duke','Blue Devils'],MICH:['Michigan','Wolverines'],HOU:['Houston','Cougars'],
-  PUR:['Purdue','Boilermakers'],FLA:['Florida','Gators'],ISU:['Iowa State','Cyclones'],
-  UCONN:['UConn','Connecticut','Huskies'],UVA:['Virginia','Cavaliers'],NEB:['Nebraska','Cornhuskers'],
-  ARK:['Arkansas','Razorbacks'],STJ:["St. John's","Red Storm"],LOU:['Louisville','Cardinals'],
-  UNC:['North Carolina','Tar Heels'],ARIZ:['Arizona','Wildcats'],BAMA:['Alabama','Crimson Tide'],
-  WISC:['Wisconsin','Badgers'],UK:['Kentucky','Wildcats'],MSU:['Michigan State','Spartans'],
-  BYU:['BYU','Brigham Young','Cougars'],VAN:['Vanderbilt','Commodores'],ILL:['Illinois','Illini'],
-  TENN:['Tennessee','Volunteers'],KU:['Kansas','Jayhawks'],OSU:['Ohio State','Buckeyes'],
-  AKRON:['Akron','Zips'],MIA:['Miami','Hurricanes'],TTU:['Texas Tech','Red Raiders'],
-  GONZ:['Gonzaga','Bulldogs'],CBAP:['Cal Baptist','Lancers'],IOWA:['Iowa','Hawkeyes'],
+  DUKE:['Duke Blue Devils'],
+  MICH:['Michigan Wolverines'],
+  HOU:['Houston Cougars'],
+  PUR:['Purdue Boilermakers'],
+  FLA:['Florida Gators'],
+  ISU:['Iowa State Cyclones'],
+  UCONN:['Connecticut Huskies','UConn Huskies'],
+  UVA:['Virginia Cavaliers'],
+  NEB:['Nebraska Cornhuskers'],
+  ARK:['Arkansas Razorbacks'],
+  STJ:["St. John's Red Storm","Saint John's Red Storm"],
+  LOU:['Louisville Cardinals'],
+  UNC:['North Carolina Tar Heels'],
+  ARIZ:['Arizona Wildcats'],
+  BAMA:['Alabama Crimson Tide'],
+  WISC:['Wisconsin Badgers'],
+  UK:['Kentucky Wildcats'],
+  MSU:['Michigan State Spartans'],
+  BYU:['BYU Cougars','Brigham Young Cougars'],
+  VAN:['Vanderbilt Commodores'],
+  ILL:['Illinois Fighting Illini'],
+  TENN:['Tennessee Volunteers'],
+  KU:['Kansas Jayhawks'],
+  OSU:['Ohio State Buckeyes'],
+  AKRON:['Akron Zips'],
+  MIA:['Miami Hurricanes'],
+  TTU:['Texas Tech Red Raiders'],
+  GONZ:['Gonzaga Bulldogs'],
+  CBAP:['California Baptist Lancers'],
+  IOWA:['Iowa Hawkeyes'],
+  USF:['South Florida Bulls'],
+  TEXAS:['Texas Longhorns'],
+  NI:['Northern Iowa Panthers'],
+  MIAOH:['Miami (OH) RedHawks','Miami OH RedHawks'],
+  UCLA:['UCLA Bruins'],
+  VCU:['VCU Rams','Virginia Commonwealth Rams'],
+  NDST:['North Dakota State Bison'],
+  HOFST:['Hofstra Pride'],
 };
 
 // ============================================================
@@ -455,27 +483,58 @@ function playerMatch(espnFirst, espnLast, entry){
 
 // Map draft school codes to possible ESPN team name fragments
 const SCHOOL_MAP = {
-  DUKE:['DUKE','BLUE DEVILS'],MICH:['MICHIGAN','WOLVERINES'],HOU:['HOUSTON','COUGARS'],
-  PUR:['PURDUE','BOILERMAKERS'],FLA:['FLORIDA','GATORS'],ISU:['IOWA STATE','CYCLONES'],
-  UCONN:['UCONN','CONNECTICUT','HUSKIES'],UVA:['VIRGINIA','CAVALIERS'],NEB:['NEBRASKA','CORNHUSKERS'],
-  ARK:['ARKANSAS','RAZORBACKS'],STJ:["ST. JOHN'S","RED STORM","SAINT JOHN"],LOU:['LOUISVILLE','CARDINALS'],
-  UNC:['NORTH CAROLINA','TAR HEELS'],ARIZ:['ARIZONA','WILDCATS'],BAMA:['ALABAMA','CRIMSON TIDE'],
-  WISC:['WISCONSIN','BADGERS'],UK:['KENTUCKY','WILDCATS'],MSU:['MICHIGAN STATE','SPARTANS'],
-  BYU:['BYU','BRIGHAM YOUNG'],VAN:['VANDERBILT','COMMODORES'],ILL:['ILLINOIS','ILLINI','FIGHTING ILLINI'],
-  TENN:['TENNESSEE','VOLUNTEERS'],KU:['KANSAS','JAYHAWKS'],OSU:['OHIO STATE','BUCKEYES'],
-  AKRON:['AKRON','Zips'],USF:['South Florida','South Florida Bulls','USF'],MIA:['MIAMI','HURRICANES'],TTU:['TEXAS TECH','RED RAIDERS'],
-  GONZ:['GONZAGA','BULLDOGS'],CBAP:['CAL BAPTIST','CALIFORNIA BAPTIST','LANCERS'],IOWA:['IOWA','HAWKEYES'],TEXAS:['TEXAS','LONGHORNS'],
+  DUKE:['DUKE','DUKE BLUE DEVILS'],
+  MICH:['MICHIGAN','MICHIGAN WOLVERINES'],
+  HOU:['HOUSTON','HOUSTON COUGARS'],
+  PUR:['PURDUE','PURDUE BOILERMAKERS'],
+  FLA:['FLORIDA','FLORIDA GATORS'],
+  ISU:['IOWA STATE','IOWA STATE CYCLONES'],
+  UCONN:['UCONN','CONNECTICUT','CONNECTICUT HUSKIES'],
+  UVA:['VIRGINIA','VIRGINIA CAVALIERS'],
+  NEB:['NEBRASKA','NEBRASKA CORNHUSKERS'],
+  ARK:['ARKANSAS','ARKANSAS RAZORBACKS'],
+  STJ:["ST. JOHN'S","SAINT JOHN'S","RED STORM"],
+  LOU:['LOUISVILLE','LOUISVILLE CARDINALS'],
+  UNC:['NORTH CAROLINA','NORTH CAROLINA TAR HEELS'],
+  ARIZ:['ARIZONA','ARIZONA WILDCATS'],
+  BAMA:['ALABAMA','ALABAMA CRIMSON TIDE'],
+  WISC:['WISCONSIN','WISCONSIN BADGERS'],
+  UK:['KENTUCKY','KENTUCKY WILDCATS'],
+  MSU:['MICHIGAN STATE','MICHIGAN STATE SPARTANS'],
+  BYU:['BYU','BRIGHAM YOUNG','BYU COUGARS'],
+  VAN:['VANDERBILT','VANDERBILT COMMODORES'],
+  ILL:['ILLINOIS','ILLINOIS FIGHTING ILLINI'],
+  TENN:['TENNESSEE','TENNESSEE VOLUNTEERS'],
+  KU:['KANSAS','KANSAS JAYHAWKS'],
+  OSU:['OHIO STATE','OHIO STATE BUCKEYES'],
+  AKRON:['AKRON','AKRON ZIPS'],
+  MIA:['MIAMI','MIAMI HURRICANES'],
+  TTU:['TEXAS TECH','TEXAS TECH RED RAIDERS'],
+  GONZ:['GONZAGA','GONZAGA BULLDOGS'],
+  CBAP:['CAL BAPTIST','CALIFORNIA BAPTIST'],
+  IOWA:['IOWA','IOWA HAWKEYES'],
+  USF:['SOUTH FLORIDA','SOUTH FLORIDA BULLS'],
+  TEXAS:['TEXAS','TEXAS LONGHORNS'],
+  NI:['NORTHERN IOWA','NORTHERN IOWA PANTHERS'],
+  MIAOH:['MIAMI (OH)','MIAMI OH','MIAMI REDHAWKS'],
+  UCLA:['UCLA','UCLA BRUINS'],
+  VCU:['VCU','VIRGINIA COMMONWEALTH'],
+  NDST:['NORTH DAKOTA STATE','NORTH DAKOTA ST'],
+  HOFST:['HOFSTRA','HOFSTRA PRIDE'],
 };
 function teamMatchesSchool(teamNames, school){
   const allowed = SCHOOL_MAP[school] || [];
   if(allowed.length===0) return true; // unknown school, don't filter
-  return teamNames.some(n=>allowed.some(a=>n.includes(a)));
+  // Use exact match against normalized names
+  return teamNames.some(n=>allowed.some(a=>n===a.toUpperCase()||n.includes(a.toUpperCase())));
 }
 
 function isSchoolEliminated(school){
   const names = SCHOOL_TEAMS[school] || [];
   for(const n of names){
-    if(S.eliminatedTeams.has(n.toUpperCase())) return true;
+    const nUp = n.toUpperCase();
+    // Exact match only — no partial matching to avoid false positives
+    if(S.eliminatedTeams.has(nUp)) return true;
   }
   return false;
 }
@@ -487,10 +546,19 @@ const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-coll
 
 async function fetchGames(){
   try{
-    const r=await fetch(`${ESPN}/scoreboard?groups=100&limit=64&seasontype=3`);
-    if(!r.ok)throw 0;
-    const data=await r.json();
-    return data.events||[];
+    // Fetch R1 both days (March 19 and 20), R2 both days, etc.
+    const fmt = d => d.toISOString().slice(0,10).replace(/-/g,'');
+    const today = new Date();
+    const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+    const dates = [fmt(yesterday), fmt(today), fmt(tomorrow)];
+    const results = await Promise.all(dates.map(d=>
+      fetch(`${ESPN}/scoreboard?groups=100&limit=64&seasontype=3&dates=${d}`)
+        .then(r=>r.ok?r.json().then(j=>j.events||[]):[])
+        .catch(()=>[])
+    ));
+    const seen = new Set();
+    return results.flat().filter(g=>seen.has(g.id)?false:seen.add(g.id));
   }catch(e){return[];}
 }
 async function fetchBox(id){
@@ -542,20 +610,21 @@ async function fetchAll(){
     if(!winner) continue;
 
     const seed = parseInt(winner.curatedRank?.current||winner.seed||0)||0;
-    const pts = seed;
 
-    // Record winner
+    // Use a single canonical key (shortDisplayName) for the result object
+    // then alias all other name variants to the same object to avoid double-counting
     const wNames = [
       (winner.team?.shortDisplayName||'').toUpperCase(),
       (winner.team?.displayName||'').toUpperCase(),
       (winner.team?.abbreviation||'').toUpperCase(),
       (winner.team?.name||'').toUpperCase(),
     ].filter(Boolean);
-    for(const n of wNames){
-      if(!tRes[n]) tRes[n]={wins:0,pts:0};
-      tRes[n].wins++; tRes[n].pts+=pts;
-      active.add(n);
-    }
+    const canonical = wNames[0];
+    if(!tRes[canonical]) tRes[canonical]={wins:0,pts:0};
+    tRes[canonical].wins++;
+    tRes[canonical].pts+=seed;
+    // Alias all other name variants to the same object
+    for(const n of wNames){ tRes[n]=tRes[canonical]; active.add(n); }
 
     // Record loser as eliminated
     if(loser){
@@ -641,12 +710,50 @@ async function fetchAll(){
 // SCORING
 // ============================================================
 function playerTotal(mgr){ return (DRAFT[mgr]||[]).reduce((s,_,i)=>s+(S.liveScores[`${mgr}::${i}`]?.pts||0),0); }
+function getTeamResult(teamName){
+  const n = (teamName||'').toUpperCase();
+  if(S.teamResults[n]) return S.teamResults[n];
+  // Try startsWith only - safer than full substring
+  for(const key of Object.keys(S.teamResults)){
+    if(key.startsWith(n) || n.startsWith(key)) return S.teamResults[key];
+  }
+  return null;
+}
+function isTeamEliminated(teamName){
+  const n = (teamName||'').toUpperCase();
+  if(S.eliminatedTeams.has(n)) return true;
+  return false;
+}
 function teamTotal(mgr){
   if(!S.teamsRevealed) return null;
-  return (S.teamDraft[mgr]||[]).reduce((s,t)=>s+(S.teamResults[t.name?.toUpperCase()]?.pts||0),0);
+  return (S.teamDraft[mgr]||[]).reduce((s,t)=>s+(getTeamResult(t.name)?.pts||0),0);
 }
 function activePlayerCount(mgr){
   return (DRAFT[mgr]||[]).filter(e=>!isSchoolEliminated(e.school)).length;
+}
+function livePlayerCount(mgr){
+  // Players whose game is currently in progress
+  return (DRAFT[mgr]||[]).reduce((count,_,i)=>{
+    return count + (S.liveScores[`${mgr}::${i}`]?.live ? 1 : 0);
+  },0);
+}
+function yetToPlayCount(mgr){
+  // Active players who haven't scored yet in the current round and have no live game
+  const currentRoundGames = S.games.filter(g=>['STATUS_SCHEDULED','STATUS_PREGAME'].includes(g.status?.type?.name));
+  const scheduledTeams = new Set();
+  for(const g of currentRoundGames){
+    for(const c of g.competitions?.[0]?.competitors||[]){
+      scheduledTeams.add((c.team?.shortDisplayName||'').toUpperCase());
+      scheduledTeams.add((c.team?.abbreviation||'').toUpperCase());
+      scheduledTeams.add((c.team?.displayName||'').toUpperCase());
+    }
+  }
+  return (DRAFT[mgr]||[]).filter((e,i)=>{
+    if(isSchoolEliminated(e.school)) return false;
+    if(S.liveScores[`${mgr}::${i}`]?.live) return false;
+    const schoolNames = (SCHOOL_TEAMS[e.school]||[]).map(n=>n.toUpperCase());
+    return schoolNames.some(n=>scheduledTeams.has(n));
+  }).length;
 }
 function ppg(mgr, idx){
   const sc = S.liveScores[`${mgr}::${idx}`];
@@ -691,7 +798,8 @@ function renderDashboard(){
 
 function renderPlayerLB(){
   const r=[...MANAGERS].map(m=>({name:m,score:playerTotal(m),active:activePlayerCount(m)})).sort((a,b)=>b.score-a.score);
-  document.getElementById('playerLeaderboard').innerHTML=r.map((m,i)=>`
+  const r2=[...MANAGERS].map(m=>({name:m,score:playerTotal(m),active:activePlayerCount(m),live:livePlayerCount(m),yet:yetToPlayCount(m)})).sort((a,b)=>b.score-a.score);
+  document.getElementById('playerLeaderboard').innerHTML=r2.map((m,i)=>`
     <div class="manager-card ${i===0?'rank-1':''}">
       <div class="rank-badge ${i===0?'gold':''}">${MEDALS[i]||''}</div>
       <div class="manager-name">${m.name}</div>
@@ -701,6 +809,14 @@ function renderPlayerLB(){
         <div class="card-meta-item">
           <div class="card-meta-val green">${m.active}</div>
           <div class="card-meta-lbl">Active</div>
+        </div>
+        <div class="card-meta-item">
+          <div class="card-meta-val" style="color:var(--accent)">${m.live}</div>
+          <div class="card-meta-lbl">Live</div>
+        </div>
+        <div class="card-meta-item">
+          <div class="card-meta-val" style="color:var(--accent2)">${m.yet}</div>
+          <div class="card-meta-lbl">Up Next</div>
         </div>
         <div class="card-meta-item">
           <div class="card-meta-val muted">${16-m.active}</div>
@@ -827,8 +943,8 @@ function renderTeams(){
           <div class="team-col-header"><div class="roster-name">${mgr}</div><div class="roster-total" style="color:var(--accent2)">${total}</div></div>
           ${teams.map(t=>{
             const name=t.name?.toUpperCase();
-            const res=S.teamResults[name]||{wins:0,pts:0};
-            const isElim=S.eliminatedTeams.has(name);
+            const res=getTeamResult(t.name)||{wins:0,pts:0};
+            const isElim=isTeamEliminated(t.name);
             const dots=Array.from({length:6},(_,i)=>`<div class="win-dot ${i<res.wins?'won':''}"></div>`).join('');
             return`<div class="team-row">
               <div class="team-seed" style="color:${isElim?'var(--subtle)':'var(--muted)'}">${t.seed||'?'}</div>

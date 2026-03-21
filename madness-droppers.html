@@ -293,8 +293,8 @@ const ADMIN_PIN = '9999'; // change this to your preferred admin PIN
 // Teams that are still alive — updated based on tournament results
 // The app will detect eliminations via ESPN API; this is a fallback seed list
 const TEAM_DRAFT = {
-  CRAIG:   [{seed:6,name:'LOUISVILLE'},{seed:11,name:'SOUTH FLORIDA'},{seed:5,name:'TEXAS TECH'},{seed:6,name:'BYU'},{seed:12,name:'AKRON'},{seed:11,name:'MIAMI OH'},{seed:6,name:'TENNESSEE'},{seed:5,name:'ST JOHN\'S'}],
-  SIEVE:   [{seed:5,name:'VANDERBILT'},{seed:11,name:'VCU'},{seed:6,name:'LOUISVILLE'},{seed:5,name:'NORTHERN IOWA'},{seed:6,name:'BYU'},{seed:7,name:'KENTUCKY'},{seed:11,name:'MIAMI OH'},{seed:14,name:'N DAKOTA ST'}],
+  CRAIG:   [{seed:6,name:'LOUISVILLE'},{seed:11,name:'SOUTH FLORIDA'},{seed:11,name:'TEXAS'},{seed:6,name:'BYU'},{seed:12,name:'AKRON'},{seed:11,name:'MIAMI OH'},{seed:6,name:'TENNESSEE'},{seed:5,name:'ST JOHN\'S'}],
+  SIEVE:   [{seed:5,name:'VANDERBILT'},{seed:11,name:'VCU'},{seed:6,name:'LOUISVILLE'},{seed:12,name:'NORTHERN IOWA'},{seed:6,name:'BYU'},{seed:7,name:'KENTUCKY'},{seed:11,name:'MIAMI OH'},{seed:14,name:'N DAKOTA ST'}],
   ROBERTS: [{seed:3,name:'MICHIGAN STATE'},{seed:5,name:'VANDERBILT'},{seed:5,name:'ST JOHN\'S'},{seed:6,name:'BYU'},{seed:7,name:'UCLA'},{seed:11,name:'VCU'},{seed:11,name:'SOUTH FLORIDA'},{seed:12,name:'AKRON'}],
   PALMER:  [{seed:12,name:'AKRON'},{seed:5,name:'VANDERBILT'},{seed:6,name:'BYU'},{seed:6,name:'TENNESSEE'},{seed:4,name:'KANSAS'},{seed:3,name:'VIRGINIA'},{seed:11,name:'VCU'},{seed:11,name:'SOUTH FLORIDA'}],
   WEILER:  [{seed:5,name:'ST JOHN\'S'},{seed:11,name:'SOUTH FLORIDA'},{seed:5,name:'VANDERBILT'},{seed:3,name:'ILLINOIS'},{seed:4,name:'ARKANSAS'},{seed:11,name:'TEXAS'},{seed:13,name:'HOFSTRA'},{seed:6,name:'TENNESSEE'}],
@@ -546,12 +546,15 @@ const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-coll
 
 async function fetchGames(){
   try{
-    // Fetch R1 both days (March 19 and 20), R2 both days, etc.
-    const fmt = d => d.toISOString().slice(0,10).replace(/-/g,'');
-    const today = new Date();
-    const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
-    const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-    const dates = [fmt(yesterday), fmt(today), fmt(tomorrow)];
+    // Fetch all tournament dates explicitly so we never miss a round
+    const dates = [
+      '20260319','20260320', // R1
+      '20260321','20260322', // R2
+      '20260326','20260327', // R3 Sweet 16
+      '20260328','20260329', // R4 Elite 8
+      '20260404',            // R5 Final Four
+      '20260406',            // R6 Championship
+    ];
     const results = await Promise.all(dates.map(d=>
       fetch(`${ESPN}/scoreboard?groups=100&limit=64&seasontype=3&dates=${d}`)
         .then(r=>r.ok?r.json().then(j=>j.events||[]):[])
@@ -739,7 +742,10 @@ function livePlayerCount(mgr){
 }
 function yetToPlayCount(mgr){
   // Active players who haven't scored yet in the current round and have no live game
-  const currentRoundGames = S.games.filter(g=>['STATUS_SCHEDULED','STATUS_PREGAME'].includes(g.status?.type?.name));
+  const currentRoundGames = S.games.filter(g=>{
+    const st = g.status?.type?.name||'';
+    return !['STATUS_FINAL','STATUS_IN_PROGRESS','STATUS_HALFTIME'].includes(st);
+  });
   const scheduledTeams = new Set();
   for(const g of currentRoundGames){
     for(const c of g.competitions?.[0]?.competitors||[]){

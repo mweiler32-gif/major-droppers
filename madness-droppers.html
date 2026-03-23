@@ -715,10 +715,12 @@ async function fetchAll(){
 function playerTotal(mgr){ return (DRAFT[mgr]||[]).reduce((s,_,i)=>s+(S.liveScores[`${mgr}::${i}`]?.pts||0),0); }
 function getTeamResult(teamName){
   const n = (teamName||'').toUpperCase();
+  // Exact match first
   if(S.teamResults[n]) return S.teamResults[n];
-  // Try startsWith only - safer than full substring
+  // Try each key — only match if the shorter name is a full word match, not a prefix
   for(const key of Object.keys(S.teamResults)){
-    if(key.startsWith(n) || n.startsWith(key)) return S.teamResults[key];
+    // Both must be at least 6 chars to avoid short name false matches like MIAMI vs MIAMI OH
+    if(n.length >= 6 && key.length >= 6 && (key === n || key.startsWith(n+' ') || n.startsWith(key+' '))) return S.teamResults[key];
   }
   return null;
 }

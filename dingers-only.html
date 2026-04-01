@@ -324,10 +324,13 @@ async function loadLive() {
 async function loadTodayGames() {
   try {
     const today = todayStr();
-    const schedRes = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&gameType=R&hydrate=linescore,teams,boxscore`);
-    if (!schedRes.ok) return;
+    console.log('Fetching schedule for:', today);
+    const schedRes = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&gameType=R&hydrate=linescore,teams`);
+    console.log('Schedule status:', schedRes.status);
+    if (!schedRes.ok) { console.error('Schedule failed:', schedRes.status); return; }
     const j = await schedRes.json();
     const games = j?.dates?.[0]?.games || [];
+    console.log('Games today:', games.length, games.map(g=>g.teams?.away?.team?.abbreviation+'@'+g.teams?.home?.team?.abbreviation+' '+g.status?.abstractGameState));
 
     todayGames = {};
     let hasLive = false;

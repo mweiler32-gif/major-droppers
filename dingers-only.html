@@ -401,11 +401,19 @@ async function loadTodayGames() {
         // Store upcoming game info keyed by team abbreviations
         todayGames['__game__'+away] = { ...gameInfo, isUpcoming: true };
         todayGames['__game__'+home] = { ...gameInfo, isUpcoming: true };
+        console.log('Upcoming game:', away, 'vs', home, gameTime);
       }
     });
 
     // Store upcoming game time by team abbrev for players not in boxscore
     // We'll look up by scanning TEAM_ABBREVS
+    console.log('todayGames keys:', Object.keys(todayGames).length, Object.keys(todayGames).slice(0,10));
+    console.log('PLAYER_TEAMS keys sample:', Object.keys(PLAYER_TEAMS).slice(0,5));
+    // Test a few players
+    ['KYLE SCHWARBER','MUNETAKA MURAKAMI','YORDAN ALVAREZ','AARON JUDGE'].forEach(p => {
+      const gi = getPlayerGameInfo(p);
+      console.log(p, '->', gi ? gi.state + ' ' + gi.away + '@' + gi.home + ' ' + gi.gameTime : 'NO MATCH');
+    });
     document.getElementById('live-indicator').style.display = hasLive ? 'inline' : 'none';
     document.getElementById('roster-upd-txt').textContent = `Games updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
 

@@ -7,149 +7,171 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --green: #111c16;
-    --green-mid: #182414;
-    --green-light: #1f3020;
-    --chalk: #f0ebe0;
-    --chalk-dim: #9a9280;
-    --amber: #f0a820;
-    --amber-dim: #c07810;
-    --red: #d94040;
-    --green-good: #4dbb70;
-    --card-bg: rgba(255,255,255,0.032);
-    --card-border: rgba(255,255,255,0.075);
-    --season-days: 183;
+    --green-dark: #1a3a0e;
+    --green-mid: #2d5a1b;
+    --green-light: #4a9a30;
+    --brown: #8b5a2b;
+    --brown-light: #c4894a;
+    --brown-dark: #5c3a1a;
+    --cream: #fdf5e4;
+    --cream-dim: #c8b896;
+    --red: #c41e3a;
+    --blue: #1b3a6b;
+    --blue-light: #2a5298;
+    --white: #ffffff;
+    --gold: #d4a017;
+    --card-bg: rgba(0,0,0,0.25);
+    --card-border: rgba(255,255,255,0.12);
   }
   * { box-sizing:border-box; margin:0; padding:0; }
   body {
-    background: var(--green);
+    background: var(--green-dark);
     background-image:
-      radial-gradient(ellipse 100% 50% at 50% 0%, rgba(240,168,32,0.06) 0%, transparent 55%),
-      repeating-linear-gradient(0deg, transparent, transparent 47px, rgba(255,255,255,0.015) 47px, rgba(255,255,255,0.015) 48px);
-    min-height:100vh; color:var(--chalk);
-    font-family:'Barlow',sans-serif;
+      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(0,0,0,0.08) 60px, rgba(0,0,0,0.08) 61px),
+      repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(0,0,0,0.05) 60px, rgba(0,0,0,0.05) 61px),
+      linear-gradient(180deg, #1e3d10 0%, #2d5a1b 40%, #1e3d10 100%);
+    min-height:100vh; color:var(--cream); font-family:'Barlow',sans-serif;
   }
   header {
     text-align:center; padding:28px 20px 18px;
-    border-bottom:1px solid rgba(240,168,32,0.18);
-    position:relative;
+    background:linear-gradient(180deg, var(--blue) 0%, var(--blue-light) 100%);
+    border-bottom:4px solid var(--red); position:relative;
+    box-shadow:0 4px 20px rgba(0,0,0,0.4);
   }
-  header::after { content:''; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%); width:180px; height:2px; background:linear-gradient(to right,transparent,var(--amber),transparent); }
-  .title { font-family:'Bebas Neue',sans-serif; font-size:clamp(48px,8vw,82px); letter-spacing:8px; line-height:1; text-shadow:0 0 50px rgba(240,168,32,0.25),3px 3px 0 rgba(0,0,0,0.5); }
-  .subtitle { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:8px; color:var(--amber); margin-top:2px; }
-  nav { display:flex; justify-content:center; gap:2px; padding:12px 16px; background:rgba(0,0,0,0.25); border-bottom:1px solid rgba(255,255,255,0.04); flex-wrap:wrap; }
-  .nav-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; background:transparent; border:1px solid transparent; color:var(--chalk-dim); padding:6px 16px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
-  .nav-btn:hover { color:var(--chalk); border-color:rgba(255,255,255,0.12); }
-  .nav-btn.active { background:var(--amber); color:#111; border-color:var(--amber); }
+  header::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.02) 10px,rgba(255,255,255,0.02) 20px); pointer-events:none; }
+  header::after { content:''; position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); width:200px; height:3px; background:var(--gold); }
+  .title { font-family:'Bebas Neue',sans-serif; font-size:clamp(48px,8vw,82px); letter-spacing:8px; line-height:1; color:var(--white); text-shadow:3px 3px 0 var(--red),6px 6px 0 rgba(0,0,0,0.3); }
+  .subtitle { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:8px; color:var(--gold); margin-top:4px; }
+  nav { display:flex; justify-content:center; gap:3px; padding:10px 16px; background:var(--brown-dark); border-bottom:3px solid var(--brown); flex-wrap:wrap; }
+  .nav-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; background:transparent; border:1px solid rgba(255,255,255,0.15); color:var(--cream-dim); padding:6px 16px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
+  .nav-btn:hover { color:var(--cream); border-color:var(--gold); background:rgba(255,255,255,0.08); }
+  .nav-btn.active { background:var(--red); color:var(--white); border-color:var(--red); }
   main { max-width:1120px; margin:0 auto; padding:20px 12px 80px; }
   .panel { display:none; animation:fadeIn 0.2s ease; }
   .panel.active { display:block; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
-  .sec-hd { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:4px; color:var(--amber); margin-bottom:12px; display:flex; align-items:center; gap:10px; }
-  .sec-hd::after { content:''; flex:1; height:1px; background:linear-gradient(to right,rgba(240,168,32,0.3),transparent); }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+  @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .sec-hd { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:4px; color:var(--gold); margin-bottom:12px; display:flex; align-items:center; gap:10px; text-shadow:1px 1px 0 rgba(0,0,0,0.5); }
+  .sec-hd::after { content:''; flex:1; height:1px; background:linear-gradient(to right,rgba(212,160,23,0.4),transparent); }
   .refresh-row { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:12px; }
-  .refresh-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--chalk-dim); padding:5px 12px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
-  .refresh-btn:hover { border-color:var(--amber); color:var(--amber); }
+  .refresh-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--cream-dim); padding:5px 12px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
+  .refresh-btn:hover { border-color:var(--gold); color:var(--gold); }
   .upd-txt { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:rgba(255,255,255,0.18); letter-spacing:1px; }
 
   /* STANDINGS */
   .stand-wrap { display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
   .stand-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:3px; padding:14px 18px; position:relative; overflow:hidden; transition:border-color 0.2s; }
-  .stand-card:hover { border-color:rgba(240,168,32,0.2); }
-  .stand-card.first { border-color:rgba(240,168,32,0.4); background:rgba(240,168,32,0.05); }
-  .stand-card.first::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--amber); }
-  .stand-top { display:grid; grid-template-columns:40px 1fr auto; align-items:center; gap:14px; margin-bottom:10px; }
-  .rank-n { font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--chalk-dim); text-align:center; }
-  .first .rank-n { color:var(--amber); }
+  .stand-card:hover { border-color:rgba(212,160,23,0.2); }
+  .stand-card.first { border-color:var(--gold); background:rgba(212,160,23,0.08); }
+  .stand-card.first::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--red); }
+  .stand-top { display:grid; grid-template-columns:44px 1fr auto; align-items:center; gap:14px; margin-bottom:10px; }
+  .rank-n { font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--cream-dim); text-align:center; }
+  .first .rank-n { color:var(--gold); font-size:32px; }
   .mgr-name { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; }
-  .mgr-sub { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--chalk-dim); letter-spacing:1px; margin-top:1px; }
-  .hr-big { font-family:'Bebas Neue',sans-serif; font-size:34px; color:var(--amber); text-align:right; line-height:1; }
-  .hr-lbl { font-family:'Barlow Condensed',sans-serif; font-size:9px; color:var(--chalk-dim); letter-spacing:2px; text-align:right; }
-  .stand-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; }
+  .mgr-sub { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--cream-dim); letter-spacing:1px; margin-top:1px; }
+  .hr-big { font-family:'Bebas Neue',sans-serif; font-size:34px; color:var(--white); text-align:right; line-height:1; }
+  .hr-lbl { font-family:'Barlow Condensed',sans-serif; font-size:9px; color:var(--cream-dim); letter-spacing:2px; text-align:right; }
+  .stand-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; }
   .stat-box { text-align:center; padding:0 8px; border-right:1px solid rgba(255,255,255,0.05); }
   .stat-box:last-child { border-right:none; }
-  .stat-val { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--chalk); }
-  .stat-lbl { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:var(--chalk-dim); letter-spacing:1px; }
-  .pace-good { color:var(--green-good); }
+  .stat-val { font-family:'Bebas Neue',sans-serif; font-size:20px; }
+  .stat-lbl { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:var(--cream-dim); letter-spacing:1px; }
+  .pace-good { color:#5dcc80; }
   .pace-bad { color:var(--red); }
-  .bar-bg { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; margin-top:8px; grid-column:1/-1; }
-  .bar-fill { height:100%; background:linear-gradient(to right,var(--amber-dim),var(--amber)); transition:width 1s ease; }
+  .bar-bg { height:3px; background:rgba(255,255,255,0.07); border-radius:2px; overflow:hidden; margin-top:8px; grid-column:1/-1; }
+  .bar-fill { height:100%; background:linear-gradient(to right,var(--red),#e63e5a); transition:width 1s ease; }
 
   /* ROSTER */
-  .mgr-tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
-  .tab-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.09); color:var(--chalk-dim); padding:5px 12px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
-  .tab-btn:hover { color:var(--chalk); border-color:rgba(255,255,255,0.2); }
-  .tab-btn.active { background:var(--green-light); border-color:var(--amber); color:var(--amber); }
-  .roster-tbl { width:100%; border-collapse:collapse; font-family:'Barlow Condensed',sans-serif; margin-bottom:20px; }
-  .roster-tbl th { font-size:10px; letter-spacing:2px; color:var(--chalk-dim); text-align:left; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.07); }
-  .roster-tbl th:not(:first-child):not(:nth-child(2)) { text-align:center; }
-  .roster-tbl td { padding:9px 10px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; }
-  .roster-tbl td:not(:first-child):not(:nth-child(2)) { text-align:center; }
-  .roster-tbl tr:hover td { background:rgba(255,255,255,0.02); }
-  .pos-pill { display:inline-block; font-size:9px; font-weight:700; letter-spacing:1px; background:rgba(255,255,255,0.07); color:var(--chalk-dim); padding:2px 5px; border-radius:2px; margin-right:5px; min-width:24px; text-align:center; }
-  .ir-pill { display:inline-block; font-size:9px; font-weight:700; letter-spacing:1px; background:rgba(217,64,64,0.2); color:var(--red); border:1px solid rgba(217,64,64,0.3); padding:2px 5px; border-radius:2px; margin-left:4px; }
-  .rep-pill { display:inline-block; font-size:9px; font-weight:700; letter-spacing:1px; background:rgba(77,187,112,0.15); color:var(--green-good); border:1px solid rgba(77,187,112,0.3); padding:2px 5px; border-radius:2px; margin-left:4px; }
-  .hr-num { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--amber); }
-  .pace-num { font-family:'Bebas Neue',sans-serif; font-size:16px; }
+  .mgr-tabs { display:flex; gap:4px; margin-bottom:14px; flex-wrap:wrap; }
+  .tab-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.09); color:var(--cream-dim); padding:5px 12px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
+  .tab-btn:hover { color:var(--cream); border-color:rgba(255,255,255,0.2); }
+  .tab-btn.active { background:var(--blue); border-color:var(--gold); color:var(--gold); }
 
-  /* IR SECTION */
-  .ir-section { background:rgba(217,64,64,0.06); border:1px solid rgba(217,64,64,0.2); border-radius:4px; padding:16px 18px; margin-top:4px; }
-  .ir-section h4 { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:3px; color:var(--red); margin-bottom:12px; }
-  .ir-slot { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
-  .ir-slot:last-child { border-bottom:none; }
-  .ir-player-name { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:600; }
-  .ir-meta { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--chalk-dim); }
-  .ir-locked { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--red); }
-  .ir-actions { display:flex; gap:6px; flex-wrap:wrap; }
-  .btn-sm { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; border:none; padding:5px 10px; cursor:pointer; border-radius:2px; transition:all 0.12s; }
-  .btn-ir { background:rgba(217,64,64,0.2); color:var(--red); border:1px solid rgba(217,64,64,0.3); }
-  .btn-ir:hover { background:rgba(217,64,64,0.35); }
-  .btn-restore { background:rgba(77,187,112,0.2); color:var(--green-good); border:1px solid rgba(77,187,112,0.3); }
-  .btn-restore:hover { background:rgba(77,187,112,0.35); }
-  .btn-primary { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:2px; background:var(--amber); border:none; color:#111; padding:10px 24px; cursor:pointer; border-radius:2px; transition:background 0.15s; }
-  .btn-primary:hover { background:#f8c040; }
-  .btn-ghost { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.12); color:var(--chalk-dim); padding:6px 14px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
-  .btn-ghost:hover { border-color:var(--chalk); color:var(--chalk); }
+  /* ROSTER TABLE */
+  .roster-tbl { width:100%; border-collapse:collapse; }
+  .roster-tbl thead tr { border-bottom:2px solid rgba(255,255,255,0.1); }
+  .roster-tbl th { font-family:'Barlow Condensed',sans-serif; font-size:10px; letter-spacing:2px; color:var(--cream-dim); text-align:left; padding:6px 10px; }
+  .roster-tbl th.center { text-align:center; }
+  .roster-tbl tbody tr { border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.1s; }
+  .roster-tbl tbody tr:hover { background:rgba(255,255,255,0.025); }
+  .roster-tbl td { padding:0; vertical-align:top; }
+  .pos-pill { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1px; background:rgba(255,255,255,0.08); color:var(--cream-dim); padding:2px 5px; border-radius:2px; margin-right:5px; min-width:24px; text-align:center; }
+  .ir-pill { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:1px; background:rgba(196,30,58,0.2); color:var(--red); border:1px solid rgba(196,30,58,0.3); padding:1px 5px; border-radius:2px; margin-left:4px; }
+  .rep-pill { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:1px; background:rgba(93,204,128,0.15); color:#5dcc80; border:1px solid rgba(93,204,128,0.3); padding:1px 5px; border-radius:2px; margin-left:4px; }
 
-  /* MODAL */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:none; align-items:center; justify-content:center; }
-  .modal-overlay.open { display:flex; }
-  .modal-box { background:#182414; border:1px solid rgba(240,168,32,0.25); border-radius:6px; padding:24px; min-width:320px; max-width:480px; width:94%; max-height:90vh; overflow-y:auto; }
-  .modal-box h3 { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--amber); margin-bottom:6px; }
-  .modal-box p { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--chalk-dim); margin-bottom:14px; line-height:1.5; }
-  .modal-input { width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.12); color:var(--chalk); font-family:'Barlow Condensed',sans-serif; font-size:14px; padding:9px 12px; border-radius:2px; outline:none; margin-bottom:10px; }
-  .modal-input:focus { border-color:var(--amber); }
-  .modal-btns { display:flex; gap:8px; margin-top:4px; }
+  /* PLAYER CELL */
+  .player-cell { padding:10px 10px 8px; }
+  .player-name-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+  .player-name { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--red); display:inline-block; flex-shrink:0; animation:livepulse 1s infinite; }
+
+  /* TODAY'S GAME INFO - inline under player name */
+  .today-game-info { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .today-time { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--cream-dim); letter-spacing:0.5px; }
+  .today-score { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--cream-dim); }
+  .today-inning { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--red); font-weight:700; letter-spacing:0.5px; }
+  .today-stats { display:flex; gap:6px; }
+  .today-stat { font-family:'Barlow Condensed',sans-serif; font-size:11px; }
+  .today-stat-val { font-family:'Bebas Neue',sans-serif; font-size:14px; }
+  .today-stat-val.hr-today { color:var(--red); }
+  .today-off { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:rgba(255,255,255,0.2); letter-spacing:0.5px; }
+
+  /* STAT CELLS */
+  .hr-cell { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--brown-light); text-align:center; padding:10px 10px; }
+  .pace-cell { font-family:'Bebas Neue',sans-serif; font-size:16px; text-align:center; padding:10px 10px; }
+  .action-cell { text-align:center; padding:10px 10px; }
+  .btn-sm { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:1px; border:none; padding:4px 8px; cursor:pointer; border-radius:2px; transition:all 0.12s; }
+  .btn-ir { background:rgba(196,30,58,0.18); color:var(--red); border:1px solid rgba(196,30,58,0.3); }
+  .btn-ir:hover { background:rgba(196,30,58,0.35); }
+  .btn-restore { background:rgba(93,204,128,0.15); color:#5dcc80; border:1px solid rgba(93,204,128,0.3); }
+  .btn-restore:hover { background:rgba(93,204,128,0.3); }
+  .roster-footer { font-family:'Barlow Condensed',sans-serif; font-size:12px; color:var(--cream-dim); text-align:right; margin-top:6px; }
 
   /* ACTIVITY */
   .act-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; margin-bottom:24px; }
   .act-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:3px; padding:12px 14px; text-align:center; }
-  .act-mgr { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px; color:var(--chalk-dim); }
+  .act-mgr { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:2px; color:var(--cream-dim); }
   .act-player { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; margin:3px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .act-hr { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--amber); line-height:1; }
-  .act-pos { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:var(--chalk-dim); letter-spacing:1px; }
-  .hot-badge { display:inline-block; background:var(--red); color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:1px; padding:1px 5px; border-radius:2px; margin-top:3px; }
+  .act-hr { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--brown-light); line-height:1; }
+  .act-pos { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:var(--cream-dim); letter-spacing:1px; }
 
-  /* SPLITS TABLE */
+  /* SPLITS */
   .splits-tbl { width:100%; border-collapse:collapse; font-family:'Barlow Condensed',sans-serif; }
-  .splits-tbl th { font-size:10px; letter-spacing:2px; color:var(--chalk-dim); padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.07); text-align:left; }
+  .splits-tbl th { font-size:10px; letter-spacing:2px; color:var(--cream-dim); padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.07); text-align:left; }
   .splits-tbl th:not(:first-child) { text-align:center; }
   .splits-tbl td { padding:8px 10px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.04); }
   .splits-tbl td:not(:first-child) { text-align:center; }
   .splits-tbl tr:hover td { background:rgba(255,255,255,0.02); }
-  .split-val { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--chalk); }
+  .split-val { font-family:'Bebas Neue',sans-serif; font-size:18px; }
   .split-mgr { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1px; }
 
+  /* IR SECTION */
+  .ir-section { background:rgba(196,30,58,0.06); border:1px solid rgba(196,30,58,0.2); border-radius:4px; padding:14px 16px; margin-top:6px; }
+  .ir-section h4 { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:3px; color:var(--red); margin-bottom:10px; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#1b3a6b; border:1px solid rgba(212,160,23,0.25); border-radius:6px; padding:24px; min-width:300px; max-width:460px; width:94%; }
+  .modal-box h3 { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--gold); margin-bottom:6px; }
+  .modal-box p { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--cream-dim); margin-bottom:14px; line-height:1.5; }
+  .modal-input { width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.12); color:var(--cream); font-family:'Barlow Condensed',sans-serif; font-size:14px; padding:9px 12px; border-radius:2px; outline:none; margin-bottom:10px; }
+  .modal-input:focus { border-color:var(--gold); }
+  .modal-btns { display:flex; gap:8px; }
+  .btn-primary { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:2px; background:var(--red); border:none; color:var(--white); padding:10px 24px; cursor:pointer; border-radius:2px; transition:background 0.15s; }
+  .btn-primary:hover { background:#a01830; }
+  .btn-ghost { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:var(--cream-dim); padding:8px 14px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
+  .btn-ghost:hover { border-color:var(--cream); color:var(--cream); }
+
   .empty-msg { text-align:center; padding:40px; }
-  .empty-msg strong { display:block; font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--amber); letter-spacing:3px; margin-bottom:6px; }
-  .empty-msg span { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--chalk-dim); }
-  .loading-pulse { text-align:center; padding:28px; font-family:'Barlow Condensed',sans-serif; font-size:12px; letter-spacing:2px; color:var(--chalk-dim); animation:pulse 1.5s infinite; }
-  @keyframes pulse { 0%,100%{opacity:0.35} 50%{opacity:1} }
+  .empty-msg strong { display:block; font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--gold); letter-spacing:3px; margin-bottom:6px; }
+  .empty-msg span { font-family:'Barlow Condensed',sans-serif; font-size:13px; color:var(--cream-dim); }
+  .loading-pulse { text-align:center; padding:28px; font-family:'Barlow Condensed',sans-serif; font-size:12px; letter-spacing:2px; color:var(--cream-dim); animation:pulse 1.5s infinite; }
 
   @media(max-width:600px) {
     .stand-stats { grid-template-columns:repeat(2,1fr); }
-    .ir-slot { grid-template-columns:1fr; }
-    .splits-tbl th:nth-child(4),.splits-tbl td:nth-child(4) { display:none; }
+    .stand-top { grid-template-columns:36px 1fr auto; }
   }
 </style>
 </head>
@@ -168,12 +190,17 @@
   <div id="panel-standings" class="panel active">
     <div class="refresh-row">
       <span class="upd-txt" id="upd-txt">Not yet refreshed</span>
-      <button class="refresh-btn" onclick="loadLive()">⟳ Refresh Live Data</button>
+      <button class="refresh-btn" onclick="loadLive()">⟳ Refresh</button>
     </div>
     <div class="sec-hd">Standings</div>
     <div id="standings-wrap"><div class="loading-pulse">LOADING...</div></div>
   </div>
   <div id="panel-roster" class="panel">
+    <div class="refresh-row">
+      <span class="upd-txt" id="roster-upd-txt"></span>
+      <span id="live-indicator" style="display:none;font-family:Barlow Condensed,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--red);animation:livepulse 1s infinite;margin-right:8px">● GAMES LIVE</span>
+      <button class="refresh-btn" onclick="refreshRoster()">⟳ Refresh</button>
+    </div>
     <div class="sec-hd">Rosters</div>
     <div class="mgr-tabs" id="roster-tabs"></div>
     <div id="roster-body"></div>
@@ -203,23 +230,26 @@
 </div>
 
 <script>
-// ── SEASON CONFIG ────────────────────────────────────────
-const SEASON_START = new Date('2026-03-26');
+// ── SEASON CONFIG ─────────────────────────────────────────
+const SEASON_START = new Date('2026-03-25');
 const SEASON_END   = new Date('2026-09-27');
 const SEASON_DAYS  = Math.round((SEASON_END - SEASON_START) / 86400000);
 
 function dayOfSeason() {
-  const now = new Date();
-  const d = Math.round((now - SEASON_START) / 86400000);
-  return Math.max(1, Math.min(d, SEASON_DAYS));
+  return Math.max(1, Math.min(Math.round((new Date() - SEASON_START) / 86400000), SEASON_DAYS));
+}
+function projectedFinal(hr) {
+  return Math.round((hr / dayOfSeason()) * SEASON_DAYS);
+}
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+function dateStr(daysAgo) {
+  const d = new Date(); d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
 }
 
-function projectedFinal(currentHR) {
-  const d = dayOfSeason();
-  return Math.round((currentHR / d) * SEASON_DAYS);
-}
-
-// ── ROSTER DATA ──────────────────────────────────────────
+// ── ROSTERS ───────────────────────────────────────────────
 const ROSTERS = {
   CRAIG:   { C:'Cal Raleigh', '1B':'Nick Kurtz', '2B':'Jazz Chisholm Jr.', '3B':'Jose Ramirez', SS:'Colson Montgomery', LF:'Riley Greene', CF:'Trent Grisham', RF:'Corbin Carroll', DH:'Rafael Devers' },
   PALMER:  { C:'Hunter Goodman', '1B':'Matt Olson', '2B':'Ketel Marte', '3B':'Eugenio Suarez', SS:'Trevor Story', LF:'James Wood', CF:'Mike Trout', RF:'Aaron Judge', DH:'Christian Yelich' },
@@ -227,85 +257,224 @@ const ROSTERS = {
   SIEVE:   { C:'Salvador Perez', '1B':'Spencer Torkelson', '2B':'Jose Altuve', '3B':'Austin Riley', SS:'Gunnar Henderson', LF:'Juan Soto', CF:'Julio Rodriguez', RF:'Fernando Tatis Jr.', DH:'Brent Rooker' },
   WEILER:  { C:'William Contreras', '1B':'Munetaka Murakami', '2B':'Matt McLain', '3B':'Junior Caminero', SS:'Zach Neto', LF:'Yordan Alvarez', CF:'Jo Adell', RF:'Ronald Acuna Jr.', DH:'Kyle Schwarber' },
 };
-
 const MANAGERS = ['CRAIG','PALMER','ROBERTS','SIEVE','WEILER'];
 const POSITIONS = ['C','1B','2B','SS','3B','LF','CF','RF','DH'];
-const SK = 'dingers2026_season_v1';
+const SK = 'dingers2026_v4';
 
-// ── STATE ────────────────────────────────────────────────
-// ir: { manager: { pos: { OriginalPlayer, lockedHR, replacement, repStartHR, repStartDate } } }
-function mkState() {
-  return { ir: Object.fromEntries(MANAGERS.map(m=>[m,{}])) };
-}
+// ── STATE ─────────────────────────────────────────────────
+function mkState() { return { ir: Object.fromEntries(MANAGERS.map(m=>[m,{}])) }; }
 let S = (() => { try { const r=localStorage.getItem(SK); return r?JSON.parse(r):mkState(); } catch(e){return mkState();} })();
 function save() { try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){} }
 
-let liveHR = {};      // { 'Player Name Upper': currentSeasonHR }
-let liveRecent = {};  // { 'Player Name Upper': { d7, d14, d30 } } — populated from ESPN if available
+let liveHR = {};
+let splitHR = { d7:{}, d14:{}, d30:{} };
+let todayGames = {};  // playerNameUpper -> { status, gameTime, inning, inningHalf, awayTeam, homeTeam, awayScore, homeScore, ab, h, hr, rbi }
 let rMgr = 'WEILER';
 let irPending = null;
+let rosterAutoRefresh = null;
 
-// ── LIVE DATA ────────────────────────────────────────────
-async function loadLive() {
-  document.getElementById('upd-txt').textContent = 'Fetching...';
-  try {
-    const url = 'https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns&season=2026&leaderGameTypes=R&limit=200&expand=stats';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('MLB API status: ' + res.status);
-    const j = await res.json();
-    liveHR = {};
-    const leaders = j?.leagueLeaders?.[0]?.leaders || [];
-    console.log('MLB API leaders found:', leaders.length);
-    leaders.forEach(entry => {
-      const full = (entry.person?.fullName || '').toUpperCase();
-      const hrs = parseInt(entry.value) || 0;
-      if (full) {
-        liveHR[full] = hrs;
-        liveHR[full.split(' ').slice(-1)[0]] = hrs;
-        if (hrs > 0) console.log(full, hrs);
-      }
-    });
-    const ct = leaders.filter(l => parseInt(l.value) > 0).length;
-    document.getElementById('upd-txt').textContent = `Updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ct} players with HRs`;
-  } catch(e) {
-    console.error('MLB API error:', e);
-    document.getElementById('upd-txt').textContent = 'Could not load live data — ' + e.message;
-  }
-  renderAll();
-}
-
+// ── HR DATA ───────────────────────────────────────────────
 function getHR(name) {
   if (!name) return null;
   const u = name.toUpperCase();
   if (liveHR[u] !== undefined) return liveHR[u];
-  // Try last name
-  const parts = u.split(' ');
-  for (let i = parts.length-1; i >= 1; i--) {
-    const key = parts.slice(i).join(' ');
+  for (let i = u.split(' ').length - 1; i >= 1; i--) {
+    const key = u.split(' ').slice(i).join(' ');
     if (liveHR[key] !== undefined) return liveHR[key];
   }
   return null;
 }
 
-// ── TEAM HR CALCULATION ──────────────────────────────────
-// For each position:
-//   - If no IR: use player's current HR
-//   - If on IR: locked HR + (replacement current HR - replacement start HR), floored at 0
+async function fetchHRLeaders(startDate, endDate) {
+  const url = `https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns&season=2026&leaderGameTypes=R&limit=500&startDate=${startDate}&endDate=${endDate}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Status ' + res.status);
+  const j = await res.json();
+  const map = {};
+  (j?.leagueLeaders?.[0]?.leaders || []).forEach(e => {
+    const full = (e.person?.fullName || '').toUpperCase();
+    const hrs = parseInt(e.value) || 0;
+    if (full) { map[full] = hrs; map[full.split(' ').slice(-1)[0]] = hrs; }
+  });
+  return map;
+}
+
+async function loadLive() {
+  document.getElementById('upd-txt').textContent = 'Fetching...';
+  try {
+    const today = todayStr();
+    const [season, d7, d14, d30] = await Promise.all([
+      fetchHRLeaders('2026-03-25', today),
+      fetchHRLeaders(dateStr(7),  today),
+      fetchHRLeaders(dateStr(14), today),
+      fetchHRLeaders(dateStr(30), today),
+    ]);
+    liveHR = season;
+    splitHR = { d7, d14, d30 };
+    const ct = Object.values(season).filter(v=>v>0).length;
+    document.getElementById('upd-txt').textContent = `Updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ct} players with HRs`;
+  } catch(e) {
+    document.getElementById('upd-txt').textContent = 'Could not load HR data';
+    console.error(e);
+  }
+  renderStandings(); renderActivity(); renderSplits();
+}
+
+// ── TODAY'S GAMES ─────────────────────────────────────────
+async function loadTodayGames() {
+  try {
+    const today = todayStr();
+    const schedRes = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&gameType=R&hydrate=linescore,teams,boxscore`);
+    if (!schedRes.ok) return;
+    const j = await schedRes.json();
+    const games = j?.dates?.[0]?.games || [];
+
+    todayGames = {};
+    let hasLive = false;
+
+    // For live/final games fetch boxscores; for upcoming just grab schedule info
+    const boxFetches = games
+      .filter(g => ['Live','Final'].includes(g.status?.abstractGameState))
+      .map(g => fetch(`https://statsapi.mlb.com/api/v1/game/${g.gamePk}/boxscore`)
+        .then(r => r.ok ? r.json() : null)
+        .then(bs => ({ gamePk: g.gamePk, bs }))
+        .catch(() => ({ gamePk: g.gamePk, bs: null }))
+      );
+    const boxes = await Promise.all(boxFetches);
+    const boxMap = Object.fromEntries(boxes.map(b => [b.gamePk, b.bs]));
+
+    games.forEach(g => {
+      const state = g.status?.abstractGameState || 'Preview';
+      const isLive = state === 'Live';
+      const isFinal = state === 'Final';
+      if (isLive) hasLive = true;
+
+      const away = g.teams?.away?.team?.abbreviation || '';
+      const home = g.teams?.home?.team?.abbreviation || '';
+      const awayScore = g.teams?.away?.score ?? null;
+      const homeScore = g.teams?.home?.score ?? null;
+      const inning = g.linescore?.currentInning || '';
+      const inningHalf = g.linescore?.inningHalf || '';
+      const gameDate = g.gameDate || '';
+      const gameTime = gameDate ? new Date(gameDate).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',timeZoneName:'short'}) : '';
+
+      // Game info shared by all players in this game
+      const gameInfo = { state, isLive, isFinal, away, home, awayScore, homeScore, inning, inningHalf, gameTime };
+
+      const bs = boxMap[g.gamePk];
+      if (bs) {
+        ['away','home'].forEach(side => {
+          const batters = bs?.teams?.[side]?.batters || [];
+          const playerMap = bs?.teams?.[side]?.players || {};
+          batters.forEach(pid => {
+            const p = playerMap['ID'+pid];
+            if (!p) return;
+            const name = (p.person?.fullName || '').toUpperCase();
+            const st = p.stats?.batting || {};
+            const entry = {
+              ...gameInfo,
+              ab: st.atBats ?? null,
+              h:  st.hits ?? null,
+              hr: st.homeRuns ?? 0,
+              rbi: st.rbi ?? null,
+            };
+            todayGames[name] = entry;
+            // Index by last name
+            const last = name.split(' ').slice(-1)[0];
+            if (!todayGames[last]) todayGames[last] = entry;
+            // Index by last + suffix variations (Jr., Jr, etc stripped)
+            const stripped = last.replace(/[^A-Z]/g,'');
+            if (!todayGames[stripped]) todayGames[stripped] = entry;
+            // Log for debugging
+            console.log('Today game player:', name, st.atBats, 'AB', st.homeRuns, 'HR');
+          });
+        });
+      } else if (state === 'Preview') {
+        // For upcoming games we don't know player lists, store by team
+        // We'll match in renderRoster by checking team abbrev
+        if (!g._previewStored) {
+          g._previewStored = true;
+        }
+        // Store upcoming game info keyed by team abbreviations
+        todayGames['__game__'+away] = { ...gameInfo, isUpcoming: true };
+        todayGames['__game__'+home] = { ...gameInfo, isUpcoming: true };
+      }
+    });
+
+    // Store upcoming game time by team abbrev for players not in boxscore
+    // We'll look up by scanning TEAM_ABBREVS
+    document.getElementById('live-indicator').style.display = hasLive ? 'inline' : 'none';
+    document.getElementById('roster-upd-txt').textContent = `Games updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+
+    if (rosterAutoRefresh) clearInterval(rosterAutoRefresh);
+    if (hasLive) rosterAutoRefresh = setInterval(refreshRoster, 60000);
+
+  } catch(e) { console.error('Today games error:', e); }
+}
+
+// Player team lookup (abbreviation) for upcoming game matching
+const PLAYER_TEAMS = {
+  'CAL RALEIGH':'SEA','NICK KURTZ':'ATH','JAZZ CHISHOLM JR.':'NYY','JOSE RAMIREZ':'CLE',
+  'COLSON MONTGOMERY':'CWS','RILEY GREENE':'DET','TRENT GRISHAM':'NYY','CORBIN CARROLL':'ARI','RAFAEL DEVERS':'SF',
+  'HUNTER GOODMAN':'COL','MATT OLSON':'ATL','KETEL MARTE':'ARI','EUGENIO SUAREZ':'CIN',
+  'TREVOR STORY':'BOS','JAMES WOOD':'WSH','MIKE TROUT':'LAA','AARON JUDGE':'NYY','CHRISTIAN YELICH':'MIL',
+  'SHEA LANGELIERS':'ATH','PETE ALONSO':'BAL','BRANDON LOWE':'PIT','MANNY MACHADO':'SD',
+  'BOBBY WITT JR.':'KC','TAYLOR WARD':'BAL','PETE CROW-ARMSTRONG':'CHC','KYLE TUCKER':'LAD','SHOHEI OHTANI':'LAD',
+  'SALVADOR PEREZ':'KC','SPENCER TORKELSON':'DET','JOSE ALTUVE':'HOU','AUSTIN RILEY':'ATL',
+  'GUNNAR HENDERSON':'BAL','JUAN SOTO':'NYM','JULIO RODRIGUEZ':'SEA','FERNANDO TATIS JR.':'SD','BRENT ROOKER':'ATH',
+  'WILLIAM CONTRERAS':'MIL','MUNETAKA MURAKAMI':'CWS','MATT MCLAIN':'CIN','JUNIOR CAMINERO':'TB',
+  'ZACH NETO':'LAA','YORDAN ALVAREZ':'HOU','JO ADELL':'LAA','RONALD ACUNA JR.':'ATL','KYLE SCHWARBER':'PHI',
+};
+
+function getPlayerGameInfo(playerName) {
+  const u = playerName.toUpperCase();
+  // Exact match
+  if (todayGames[u]) return todayGames[u];
+  // Last name only
+  const last = u.split(' ').slice(-1)[0];
+  if (todayGames[last]) return todayGames[last];
+  // Partial match — check if any key in todayGames starts with or contains the last name
+  for (const key of Object.keys(todayGames)) {
+    if (key.startsWith('__game__')) continue;
+    if (key.endsWith(last) || key.startsWith(u.split(' ')[0])) return todayGames[key];
+  }
+  // Check upcoming game via team abbrev
+  const teamAbbr = PLAYER_TEAMS[u];
+  if (teamAbbr && todayGames['__game__'+teamAbbr]) return todayGames['__game__'+teamAbbr];
+  return null;
+}
+
+function formatGameInfo(gi, playerName) {
+  if (!gi) return '<span class="today-off">No game today</span>';
+  if (gi.isUpcoming) {
+    return `<span class="today-time">🕐 ${gi.gameTime} &nbsp;${gi.away} @ ${gi.home}</span>`;
+  }
+  const inningArrow = gi.inningHalf === 'Top' ? '▲' : '▼';
+  const inningStr = gi.isLive ? `<span class="today-inning">${inningArrow}${gi.inning}</span>` : '';
+  const scoreStr = (gi.awayScore !== null)
+    ? `<span class="today-score">${gi.away} ${gi.awayScore} · ${gi.home} ${gi.homeScore}${gi.isFinal ? ' F' : ''}</span>`
+    : '';
+  const statsStr = (gi.ab !== null) ? `
+    <span class="today-stats">
+      <span class="today-stat"><span class="today-stat-val">${gi.ab}</span> AB</span>
+      <span class="today-stat"><span class="today-stat-val">${gi.h}</span> H</span>
+      <span class="today-stat"><span class="today-stat-val ${gi.hr > 0 ? 'hr-today' : ''}">${gi.hr > 0 ? '💥'+gi.hr : gi.hr}</span> HR</span>
+    </span>` : '';
+  return `${inningStr} ${scoreStr} ${statsStr}`;
+}
+
+// ── TEAM DATA ─────────────────────────────────────────────
 function getTeamData(mgr) {
   const positions = [];
   let totalHR = 0;
-
   POSITIONS.forEach(pos => {
     const player = ROSTERS[mgr][pos];
     const irData = S.ir[mgr]?.[pos];
-
     if (!irData) {
-      // Normal slot
       const hr = getHR(player) ?? 0;
-      positions.push({ pos, player, hr, onIR: false, replacement: null });
+      positions.push({ pos, player, hr, onIR:false, replacement:null });
       totalHR += hr;
     } else {
-      // IR slot — locked HR + replacement additions
       const locked = irData.lockedHR || 0;
       let repAdded = 0;
       if (irData.replacement) {
@@ -313,111 +482,66 @@ function getTeamData(mgr) {
         repAdded = Math.max(0, repCurrent - (irData.repStartHR || 0));
       }
       const slotHR = locked + repAdded;
-      positions.push({
-        pos, player, hr: locked, onIR: true,
-        replacement: irData.replacement,
-        repAdded, slotHR,
-        lockedHR: locked
-      });
+      positions.push({ pos, player, hr:locked, onIR:true, replacement:irData.replacement, repAdded, slotHR, lockedHR:locked });
       totalHR += slotHR;
     }
   });
-
   positions.sort((a,b) => (b.slotHR ?? b.hr) - (a.slotHR ?? a.hr));
   return { positions, totalHR };
 }
 
-// ── STANDINGS ────────────────────────────────────────────
+// ── STANDINGS ─────────────────────────────────────────────
 function renderStandings() {
   const data = MANAGERS.map(m => {
     const { totalHR } = getTeamData(m);
-    return { mgr: m, totalHR, pace: projectedFinal(totalHR) };
+    return { mgr:m, totalHR, pace:projectedFinal(totalHR) };
   }).sort((a,b) => b.totalHR - a.totalHR);
-
   const mx = Math.max(...data.map(d=>d.totalHR), 1);
-  const d7Data = computeSplits();
-
+  const splits = computeSplits();
   document.getElementById('standings-wrap').innerHTML = data.map((d,i) => {
-    const d7 = d7Data[d.mgr]?.d7 ?? 0;
-    const d14 = d7Data[d.mgr]?.d14 ?? 0;
-    const d30 = d7Data[d.mgr]?.d30 ?? 0;
-    const paceClass = d.pace >= d.totalHR ? 'pace-good' : 'pace-bad';
+    const sp = splits[d.mgr] || {};
     return `<div class="stand-card ${i===0?'first':''}">
       <div class="stand-top">
         <div class="rank-n">${i+1}</div>
-        <div><div class="mgr-name">${d.mgr}</div><div class="mgr-sub">9 players · ${dayOfSeason()} days in</div></div>
+        <div><div class="mgr-name">${d.mgr}</div><div class="mgr-sub">9 players · Day ${dayOfSeason()}</div></div>
         <div><div class="hr-big">${d.totalHR}</div><div class="hr-lbl">HOME RUNS</div></div>
       </div>
       <div class="stand-stats">
-        <div class="stat-box"><div class="stat-val ${paceClass}">${d.pace}</div><div class="stat-lbl">SEASON PACE</div></div>
-        <div class="stat-box"><div class="stat-val">${d7}</div><div class="stat-lbl">LAST 7</div></div>
-        <div class="stat-box"><div class="stat-val">${d14}</div><div class="stat-lbl">LAST 14</div></div>
-        <div class="stat-box"><div class="stat-val">${d30}</div><div class="stat-lbl">LAST 30</div></div>
+        <div class="stat-box"><div class="stat-val ${d.pace>=d.totalHR?'pace-good':'pace-bad'}">${d.pace}</div><div class="stat-lbl">PACE</div></div>
+        <div class="stat-box"><div class="stat-val">${sp.d7 ?? 0}</div><div class="stat-lbl">LAST 7</div></div>
+        <div class="stat-box"><div class="stat-val">${sp.d14 ?? 0}</div><div class="stat-lbl">LAST 14</div></div>
+        <div class="stat-box"><div class="stat-val">${sp.d30 ?? 0}</div><div class="stat-lbl">LAST 30</div></div>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${(d.totalHR/mx*100).toFixed(1)}%"></div></div>
     </div>`;
   }).join('');
 }
 
-// ── SPLITS ───────────────────────────────────────────────
-// Since ESPN doesn't expose easy recent-period HR splits per player,
-// we store daily snapshots in localStorage and compute diffs
-const SNAP_KEY = 'dingers2026_snaps';
-
-function saveSnapshot() {
-  const today = new Date().toISOString().split('T')[0];
-  try {
-    const snaps = JSON.parse(localStorage.getItem(SNAP_KEY)||'{}');
-    const teamTotals = {};
-    MANAGERS.forEach(m => { teamTotals[m] = getTeamData(m).totalHR; });
-    snaps[today] = teamTotals;
-    // Keep last 35 days only
-    const keys = Object.keys(snaps).sort();
-    if (keys.length > 35) keys.slice(0, keys.length-35).forEach(k => delete snaps[k]);
-    localStorage.setItem(SNAP_KEY, JSON.stringify(snaps));
-  } catch(e) {}
+// ── SPLITS ────────────────────────────────────────────────
+function getTeamSplit(mgr, hrMap) {
+  let total = 0;
+  POSITIONS.forEach(pos => {
+    const irData = S.ir[mgr]?.[pos];
+    const player = irData?.replacement || ROSTERS[mgr][pos];
+    const u = (player||'').toUpperCase();
+    total += hrMap[u] ?? hrMap[u.split(' ').slice(-1)[0]] ?? 0;
+  });
+  return total;
 }
-
 function computeSplits() {
-  try {
-    const snaps = JSON.parse(localStorage.getItem(SNAP_KEY)||'{}');
-    const today = new Date();
-    const result = {};
-    MANAGERS.forEach(m => {
-      const current = getTeamData(m).totalHR;
-      const getSnap = (daysAgo) => {
-        const d = new Date(today); d.setDate(d.getDate()-daysAgo);
-        const key = d.toISOString().split('T')[0];
-        // Find closest snap at or before that date
-        const keys = Object.keys(snaps).sort().filter(k=>k<=key);
-        if (!keys.length) return null;
-        return snaps[keys[keys.length-1]]?.[m] ?? null;
-      };
-      const s7 = getSnap(7); const s14 = getSnap(14); const s30 = getSnap(30);
-      result[m] = {
-        d7:  s7  !== null ? Math.max(0, current - s7)  : '—',
-        d14: s14 !== null ? Math.max(0, current - s14) : '—',
-        d30: s30 !== null ? Math.max(0, current - s30) : '—',
-      };
-    });
-    return result;
-  } catch(e) { return Object.fromEntries(MANAGERS.map(m=>[m,{d7:'—',d14:'—',d30:'—'}])); }
+  const result = {};
+  MANAGERS.forEach(m => {
+    result[m] = { d7:getTeamSplit(m,splitHR.d7), d14:getTeamSplit(m,splitHR.d14), d30:getTeamSplit(m,splitHR.d30) };
+  });
+  return result;
 }
-
 function renderSplits() {
   const splits = computeSplits();
-  const data = MANAGERS.map(m => ({
-    mgr: m,
-    total: getTeamData(m).totalHR,
-    ...splits[m]
-  })).sort((a,b) => b.total - a.total);
-
+  const data = MANAGERS.map(m => ({ mgr:m, total:getTeamData(m).totalHR, ...splits[m] })).sort((a,b)=>b.total-a.total);
   document.getElementById('splits-body').innerHTML = `
-    <p style="font-family:Barlow Condensed,sans-serif;font-size:12px;color:var(--chalk-dim);margin-bottom:14px;letter-spacing:0.5px;">
-      Splits are calculated from daily snapshots saved each time you refresh. More data accumulates as the season progresses.
-    </p>
+    <p style="font-family:Barlow Condensed,sans-serif;font-size:12px;color:var(--cream-dim);margin-bottom:14px">HR totals for the last 7, 14, and 30 calendar days pulled directly from MLB Stats API.</p>
     <table class="splits-tbl">
-      <thead><tr><th>MANAGER</th><th>TOTAL HR</th><th>LAST 7</th><th>LAST 14</th><th>LAST 30</th><th>PACE</th></tr></thead>
+      <thead><tr><th>MANAGER</th><th>TOTAL</th><th>LAST 7</th><th>LAST 14</th><th>LAST 30</th><th>PACE</th></tr></thead>
       <tbody>${data.map(d=>`<tr>
         <td><span class="split-mgr">${d.mgr}</span></td>
         <td><span class="split-val">${d.total}</span></td>
@@ -429,7 +553,7 @@ function renderSplits() {
     </table>`;
 }
 
-// ── ROSTER ───────────────────────────────────────────────
+// ── ROSTER ────────────────────────────────────────────────
 function renderRosterTabs() {
   document.getElementById('roster-tabs').innerHTML = MANAGERS.map(m =>
     `<button class="tab-btn ${m===rMgr?'active':''}" onclick="switchRMgr('${m}')">${m}</button>`).join('');
@@ -444,143 +568,137 @@ function renderRoster() {
   const rows = positions.map(p => {
     const hr = p.onIR ? p.slotHR : p.hr;
     const pace = projectedFinal(hr);
-    const paceClass = pace >= 20 ? 'pace-good' : 'pace-bad';
+    const displayPlayer = p.onIR && p.replacement ? p.replacement : p.player;
+    const gi = getPlayerGameInfo(displayPlayer);
+    const isLive = gi?.isLive || false;
 
-    let playerCell = `<span class="pos-pill">${p.pos}</span><strong>${p.player}</strong>`;
-    if (p.onIR) {
-      playerCell += `<span class="ir-pill">IR</span>`;
-      if (p.replacement) playerCell += `<br><span style="font-size:11px;color:var(--chalk-dim);padding-left:30px">▶ ${p.replacement}</span><span class="rep-pill">REP +${p.repAdded}</span>`;
-    }
+    // Player name row
+    let nameHtml = `<span class="pos-pill">${p.pos}</span>`;
+    nameHtml += `<span class="player-name">${p.player}</span>`;
+    if (p.onIR) nameHtml += `<span class="ir-pill">IR</span>`;
+    if (p.replacement) nameHtml += ` <span style="font-size:11px;color:var(--cream-dim)">▶ ${p.replacement}</span><span class="rep-pill">REP +${p.repAdded}</span>`;
+    if (isLive) nameHtml += ` <span class="live-dot"></span>`;
+
+    const gameInfoHtml = formatGameInfo(gi, displayPlayer);
 
     const irBtn = !p.onIR
-      ? `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}','${p.player}',${p.hr})">Place on IR</button>`
+      ? `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}','${p.player.replace(/'/g,"\\'")}',${p.hr})">IR</button>`
       : p.replacement
         ? `<button class="btn-sm btn-restore" onclick="restoreFromIR('${rMgr}','${p.pos}')">Restore</button>`
-        : `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}','${p.player}',${p.lockedHR})">Add Replacement</button>`;
+        : `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}','${p.player.replace(/'/g,"\\'")}',${p.lockedHR})">Add Rep</button>`;
 
     return `<tr>
-      <td>${playerCell}</td>
-      <td class="hr-num">${hr}</td>
-      <td class="pace-num ${paceClass}">${pace}</td>
-      <td>${irBtn}</td>
+      <td class="player-cell">
+        <div class="player-name-row">${nameHtml}</div>
+        <div class="today-game-info">${gameInfoHtml}</div>
+      </td>
+      <td class="hr-cell">${hr}</td>
+      <td class="pace-cell ${pace>=20?'pace-good':'pace-bad'}">${pace}</td>
+      <td class="action-cell">${irBtn}</td>
     </tr>`;
   }).join('');
 
   body.innerHTML = `
     <table class="roster-tbl">
-      <thead><tr><th>PLAYER</th><th>HR</th><th>PACE</th><th></th></tr></thead>
+      <thead><tr>
+        <th>PLAYER</th>
+        <th class="center">HR</th>
+        <th class="center">PACE</th>
+        <th class="center"></th>
+      </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div style="font-family:Barlow Condensed,sans-serif;font-size:12px;color:var(--chalk-dim);text-align:right;margin-top:-8px;margin-bottom:16px">
-      Team Total: <strong style="color:var(--amber);font-family:Bebas Neue,sans-serif;font-size:18px">${totalHR} HR</strong> &nbsp;·&nbsp; Pace: <strong style="font-family:Bebas Neue,sans-serif;font-size:18px">${projectedFinal(totalHR)}</strong>
-    </div>`;
+    <div class="roster-footer">Team Total: <strong style="color:var(--gold);font-family:Bebas Neue,sans-serif;font-size:18px">${totalHR} HR</strong> &nbsp;·&nbsp; Pace: <strong style="font-family:Bebas Neue,sans-serif;font-size:18px">${projectedFinal(totalHR)}</strong></div>`;
 }
 
-// ── IR MANAGEMENT ────────────────────────────────────────
+async function refreshRoster() {
+  await loadTodayGames();
+  renderRoster();
+}
+
+// ── ACTIVITY ──────────────────────────────────────────────
+function renderActivity() {
+  const all = [];
+  MANAGERS.forEach(m => {
+    getTeamData(m).positions.forEach(p => {
+      const hr = p.onIR ? p.slotHR : p.hr;
+      all.push({ mgr:m, pos:p.pos, player:p.player, hr });
+    });
+  });
+  all.sort((a,b) => b.hr - a.hr);
+  const body = document.getElementById('activity-body');
+  if (!all.length) { body.innerHTML='<div class="empty-msg"><strong>NO DATA</strong><span>Refresh to load stats.</span></div>'; return; }
+  body.innerHTML = `
+    <div class="act-grid">${all.slice(0,9).map(p=>`
+      <div class="act-card">
+        <div class="act-mgr">${p.mgr}</div>
+        <div class="act-player">${p.player}</div>
+        <div class="act-hr">${p.hr}</div>
+        <div class="act-pos">${p.pos}</div>
+      </div>`).join('')}
+    </div>
+    <div class="sec-hd" style="margin-bottom:10px">Full League Board</div>
+    <table class="splits-tbl">
+      <thead><tr><th>PLAYER</th><th>MGR</th><th>POS</th><th>HR</th><th>PACE</th></tr></thead>
+      <tbody>${all.map(p=>`<tr>
+        <td><strong>${p.player}</strong></td>
+        <td><span style="color:var(--gold);font-family:Bebas Neue,sans-serif">${p.mgr}</span></td>
+        <td><span class="pos-pill">${p.pos}</span></td>
+        <td class="hr-cell" style="padding:6px 10px">${p.hr}</td>
+        <td class="pace-cell ${projectedFinal(p.hr)>=20?'pace-good':'pace-bad'}" style="padding:6px 10px">${projectedFinal(p.hr)}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── IR MANAGEMENT ─────────────────────────────────────────
 function openIR(mgr, pos, player, currentHR) {
   irPending = { mgr, pos, player, currentHR };
   const hasRep = !!S.ir[mgr]?.[pos]?.replacement;
   document.getElementById('ir-modal-title').textContent = hasRep ? 'CHANGE REPLACEMENT' : 'PLACE ON IR';
   document.getElementById('ir-modal-sub').textContent = hasRep
-    ? `Enter a new replacement player for ${player} (${pos} slot). Their HRs will count from today forward.`
-    : `${player} will be placed on IR. Their current ${currentHR} HRs are locked. Enter a replacement player — only HRs they hit from today forward will count.`;
+    ? `Enter a new replacement for ${player}. Their HRs will count from today forward.`
+    : `${player} will be placed on IR. Their current ${currentHR} HRs are locked. Enter a replacement — only HRs they hit from today forward will count.`;
   document.getElementById('ir-rep-name').value = '';
   document.getElementById('ir-rep-hrs').value = '';
   document.getElementById('ir-modal').classList.add('open');
 }
-
 function confirmIR() {
   if (!irPending) return;
   const { mgr, pos, player, currentHR } = irPending;
   const repName = document.getElementById('ir-rep-name').value.trim();
   const repHRs = parseInt(document.getElementById('ir-rep-hrs').value) || 0;
   if (!repName) { alert('Please enter a replacement player name.'); return; }
-
   if (!S.ir[mgr]) S.ir[mgr] = {};
   const existing = S.ir[mgr][pos];
-  S.ir[mgr][pos] = {
-    originalPlayer: player,
-    lockedHR: existing ? existing.lockedHR : currentHR,
-    replacement: repName,
-    repStartHR: repHRs,
-    repStartDate: new Date().toISOString().split('T')[0]
-  };
-  save(); closeModal(); renderAll();
+  S.ir[mgr][pos] = { originalPlayer:player, lockedHR: existing ? existing.lockedHR : currentHR, replacement:repName, repStartHR:repHRs, repStartDate:todayStr() };
+  save(); closeModal(); renderRoster(); renderStandings();
 }
-
 function restoreFromIR(mgr, pos) {
   if (!S.ir[mgr]?.[pos]) return;
-  if (!confirm(`Restore ${S.ir[mgr][pos].originalPlayer} from IR? The replacement player will be removed.`)) return;
+  if (!confirm(`Restore ${S.ir[mgr][pos].originalPlayer} from IR?`)) return;
   delete S.ir[mgr][pos];
-  save(); renderAll();
+  save(); renderRoster(); renderStandings();
 }
-
 function closeModal() { document.getElementById('ir-modal').classList.remove('open'); irPending=null; }
 
-// ── ACTIVITY ─────────────────────────────────────────────
-function renderActivity() {
-  const all = [];
-  MANAGERS.forEach(m => {
-    const { positions } = getTeamData(m);
-    positions.forEach(p => {
-      const hr = p.onIR ? p.slotHR : p.hr;
-      all.push({ mgr:m, pos:p.pos, player: p.onIR && p.replacement ? p.replacement : p.player, hr });
-    });
-  });
-  all.sort((a,b) => b.hr - a.hr);
-
-  const body = document.getElementById('activity-body');
-  if (!all.length) { body.innerHTML='<div class="empty-msg"><strong>NO DATA</strong><span>Refresh to load live stats.</span></div>'; return; }
-
-  const top9 = all.slice(0,9);
-  body.innerHTML = `
-    <div class="sec-hd" style="margin-bottom:10px">Season Leaders</div>
-    <div class="act-grid">${top9.map(p=>`
-      <div class="act-card">
-        <div class="act-mgr">${p.mgr}</div>
-        <div class="act-player">${p.player}</div>
-        <div class="act-hr">${p.hr}</div>
-        <div class="act-pos">${p.pos}</div>
-        ${p.hr >= 30 ? '<div class="hot-badge">🔥 30+ HR</div>' : ''}
-      </div>`).join('')}
-    </div>
-    <div class="sec-hd" style="margin-bottom:10px">Full League Board</div>
-    <table class="splits-tbl">
-      <thead><tr><th>PLAYER</th><th>MANAGER</th><th>POS</th><th>HR</th><th>PACE</th></tr></thead>
-      <tbody>${all.map(p=>`<tr>
-        <td><strong>${p.player}</strong></td>
-        <td><span style="color:var(--amber);font-family:Bebas Neue,sans-serif">${p.mgr}</span></td>
-        <td><span class="pos-pill">${p.pos}</span></td>
-        <td class="hr-num">${p.hr}</td>
-        <td class="pace-num ${projectedFinal(p.hr)>=20?'pace-good':'pace-bad'}">${projectedFinal(p.hr)}</td>
-      </tr>`).join('')}
-      </tbody>
-    </table>`;
-}
-
-// ── NAV ──────────────────────────────────────────────────
+// ── NAV ───────────────────────────────────────────────────
 function showPanel(name, btn) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
-  if(btn) btn.classList.add('active');
-  if(name==='standings') renderStandings();
-  if(name==='roster') renderRoster();
-  if(name==='activity') renderActivity();
-  if(name==='splits') renderSplits();
+  if (btn) btn.classList.add('active');
+  if (name==='standings') renderStandings();
+  if (name==='roster') { loadTodayGames().then(renderRoster); }
+  if (name==='activity') renderActivity();
+  if (name==='splits') renderSplits();
 }
 
-function renderAll() {
-  renderStandings();
-  renderRoster();
-  renderActivity();
-  renderSplits();
-  saveSnapshot();
-}
-
-// ── INIT ─────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────
 renderStandings();
 loadLive();
+// Pre-load today's games so roster tab is ready immediately
+loadTodayGames();
 </script>
 </body>
 </html>

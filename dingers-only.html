@@ -249,37 +249,27 @@ let irPending = null;
 async function loadLive() {
   document.getElementById('upd-txt').textContent = 'Fetching...';
   try {
-    const urls = [
-      'https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/statistics/athletes?region=us&lang=en&contentorigin=espn&isqualified=false&limit=500&page=1&category=homeRuns&seasontype=2&sort=homeRuns%3Adesc',
-      'https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/statistics/athletes?region=us&lang=en&contentorigin=espn&isqualified=false&limit=500&page=1&category=homeRuns&seasontype=2&sort=homeRuns%3Adesc&season=2026',
-    ];
-    let j = null;
-    for (const url of urls) {
-      try {
-        const res = await fetch(url);
-        console.log('ESPN status:', res.status, url);
-        if (!res.ok) continue;
-        j = await res.json();
-        console.log('ESPN keys:', Object.keys(j));
-        console.log('Athletes count:', j?.athletes?.length);
-        break;
-      } catch(e) { console.warn('URL failed:', e); }
-    }
-    if (!j) throw new Error('No valid ESPN response');
+    const url = 'https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns&season=2026&leaderGameTypes=R&limit=200&expand=stats';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('MLB API status: ' + res.status);
+    const j = await res.json();
     liveHR = {};
-    (j?.athletes||[]).forEach(e => {
-      const a = e.athlete||e;
-      const full = (a.displayName||'').toUpperCase();
-      const hrs = parseInt(e.statistics?.[0]?.value)||0;
-      liveHR[full] = hrs;
-      liveHR[full.split(' ').slice(-1)[0]] = hrs;
-      if (hrs > 0) console.log(full, hrs);
+    const leaders = j?.leagueLeaders?.[0]?.leaders || [];
+    console.log('MLB API leaders found:', leaders.length);
+    leaders.forEach(entry => {
+      const full = (entry.person?.fullName || '').toUpperCase();
+      const hrs = parseInt(entry.value) || 0;
+      if (full) {
+        liveHR[full] = hrs;
+        liveHR[full.split(' ').slice(-1)[0]] = hrs;
+        if (hrs > 0) console.log(full, hrs);
+      }
     });
-    const ct = Object.values(liveHR).filter(v=>v>0).length;
+    const ct = leaders.filter(l => parseInt(l.value) > 0).length;
     document.getElementById('upd-txt').textContent = `Updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ct} players with HRs`;
   } catch(e) {
-    console.error('ESPN error:', e);
-    document.getElementById('upd-txt').textContent = 'Could not load live data — check F12 console';
+    console.error('MLB API error:', e);
+    document.getElementById('upd-txt').textContent = 'Could not load live data — ' + e.message;
   }
   renderAll();
 }

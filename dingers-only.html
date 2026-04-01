@@ -291,10 +291,20 @@ let rosterAutoRefresh = null;
 function getHR(name) {
   if (!name) return null;
   const u = name.toUpperCase();
+  // Exact full name match first
   if (liveHR[u] !== undefined) return liveHR[u];
-  for (let i = u.split(' ').length - 1; i >= 1; i--) {
-    const key = u.split(' ').slice(i).join(' ');
-    if (liveHR[key] !== undefined) return liveHR[key];
+  // Try without suffix (Jr., Sr., II, III etc)
+  const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+  if (stripped !== u && liveHR[stripped] !== undefined) return liveHR[stripped];
+  // Try last name only if it's unambiguous (not a suffix)
+  const parts = u.split(' ');
+  const last = parts[parts.length - 1];
+  if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
+    if (liveHR[last] !== undefined) return liveHR[last];
+  } else if (parts.length >= 3) {
+    // Use second-to-last for names like "WITT JR."
+    const secondLast = parts[parts.length - 2];
+    if (liveHR[secondLast] !== undefined) return liveHR[secondLast];
   }
   return null;
 }
@@ -308,7 +318,18 @@ async function fetchHRLeaders(startDate, endDate) {
   (j?.leagueLeaders?.[0]?.leaders || []).forEach(e => {
     const full = (e.person?.fullName || '').toUpperCase();
     const hrs = parseInt(e.value) || 0;
-    if (full) { map[full] = hrs; map[full.split(' ').slice(-1)[0]] = hrs; }
+    if (!full) return;
+    // Index by full name
+    map[full] = hrs;
+    // Index by name without suffix
+    const stripped = full.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+    if (stripped !== full) map[stripped] = hrs;
+    // Index by last name only if not a suffix
+    const parts = full.split(' ');
+    const last = parts[parts.length - 1];
+    if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
+      if (!map[last]) map[last] = hrs; // don't overwrite a full name match
+    }
   });
   return map;
 }
@@ -345,7 +366,7 @@ async function loadTodayGames() {
     const j = await schedRes.json();
     const games = j?.dates?.[0]?.games || [];
     console.log('Games today:', games.length);
-    if (games.length > 0) console.log('First game raw:', JSON.stringify(games[0], null, 2));
+
 
     todayGames = {};
     let hasLive = false;
@@ -363,8 +384,10 @@ async function loadTodayGames() {
 
     games.forEach(g => {
       const state = g.status?.abstractGameState || 'Preview';
-      const isLive = state === 'Live';
+      const detailedState = g.status?.detailedState || '';
+      const isLive = detailedState === 'In Progress';
       const isFinal = state === 'Final';
+      const isUpcoming = !isLive && !isFinal; // Preview, Pre-Game, Warmup all treated as upcoming
       if (isLive) hasLive = true;
 
       const away = g.teams?.away?.team?.name || '';
@@ -378,11 +401,14 @@ async function loadTodayGames() {
       const gameDate = g.gameDate || '';
       const gameTime = gameDate ? new Date(gameDate).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',timeZoneName:'short'}) : '';
 
-      // Game info shared by all players in this game
-      const gameInfo = { state, isLive, isFinal, away, home, awayId, homeId, awayScore, homeScore, inning, inningHalf, gameTime };
+      const gameInfo = { state, isLive, isFinal, isUpcoming, away, home, awayId, homeId, awayScore, homeScore, inning, inningHalf, gameTime };
+
+      // Always store team entries so players not in batting order still get game context
+      if (awayId) todayGames['__team__'+awayId] = { ...gameInfo, isUpcoming: isUpcoming || false, hr: null, ab: null, h: null };
+      if (homeId) todayGames['__team__'+homeId] = { ...gameInfo, isUpcoming: isUpcoming || false, hr: null, ab: null, h: null };
 
       const bs = boxMap[g.gamePk];
-      if (bs) {
+      if (bs && isLive) {
         ['away','home'].forEach(side => {
           const batters = bs?.teams?.[side]?.batters || [];
           const playerMap = bs?.teams?.[side]?.players || {};
@@ -399,33 +425,18 @@ async function loadTodayGames() {
               rbi: st.rbi ?? null,
             };
             todayGames[name] = entry;
-            // Index by last name
-            const last = name.split(' ').slice(-1)[0];
-            if (!todayGames[last]) todayGames[last] = entry;
-            // Index by last + suffix variations (Jr., Jr, etc stripped)
-            const stripped = last.replace(/[^A-Z]/g,'');
-            if (!todayGames[stripped]) todayGames[stripped] = entry;
-            // Log for debugging
-            console.log('Today game player:', name, st.atBats, 'AB', st.homeRuns, 'HR');
+            // Also index without suffix for matching
+            const stripped = name.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+            if (stripped !== name) todayGames[stripped] = entry;
+
           });
         });
-      } else if (state === 'Preview') {
-        // For upcoming games we don't know player lists, store by team
-        // We'll match in renderRoster by checking team abbrev
-        if (!g._previewStored) {
-          g._previewStored = true;
-        }
-        // Store upcoming game info keyed by team abbreviations
-        const awayId = g.teams?.away?.team?.id;
-        const homeId = g.teams?.home?.team?.id;
-        if (awayId) todayGames['__team__'+awayId] = { ...gameInfo, isUpcoming: true };
-        if (homeId) todayGames['__team__'+homeId] = { ...gameInfo, isUpcoming: true };
-        console.log('Upcoming game:', g.teams?.away?.team?.name, 'vs', g.teams?.home?.team?.name, gameTime, 'IDs:', awayId, homeId);
       }
     });
 
     // Store upcoming game time by team abbrev for players not in boxscore
     // We'll look up by scanning TEAM_ABBREVS
+
     // Refresh standings dingers section whenever game data updates
     renderTodaysDingers();
     document.getElementById('live-indicator').style.display = hasLive ? 'inline' : 'none';
@@ -438,70 +449,86 @@ async function loadTodayGames() {
 }
 
 // Player team lookup (abbreviation) for upcoming game matching
-// MLB Stats API team IDs
+// MLB Stats API team IDs (verified 2026)
 const PLAYER_TEAM_IDS = {
-  'CAL RALEIGH':136,        // SEA
-  'NICK KURTZ':133,         // ATH
-  'JAZZ CHISHOLM JR.':147,  // NYY
-  'JOSE RAMIREZ':114,       // CLE
-  'COLSON MONTGOMERY':145,  // CWS
-  'RILEY GREENE':116,       // DET
-  'TRENT GRISHAM':147,      // NYY
-  'CORBIN CARROLL':109,     // ARI
-  'RAFAEL DEVERS':137,      // SF
-  'HUNTER GOODMAN':115,     // COL
-  'MATT OLSON':144,         // ATL
-  'KETEL MARTE':109,        // ARI
-  'EUGENIO SUAREZ':113,     // CIN
-  'TREVOR STORY':111,       // BOS
-  'JAMES WOOD':120,         // WSH
-  'MIKE TROUT':108,         // LAA
-  'AARON JUDGE':147,        // NYY
-  'CHRISTIAN YELICH':158,   // MIL
-  'SHEA LANGELIERS':133,    // ATH
-  'PETE ALONSO':110,        // BAL
-  'BRANDON LOWE':134,       // PIT
-  'MANNY MACHADO':135,      // SD
-  'BOBBY WITT JR.':118,     // KC
-  'TAYLOR WARD':110,        // BAL
-  'PETE CROW-ARMSTRONG':112,// CHC
-  'KYLE TUCKER':119,        // LAD
-  'SHOHEI OHTANI':119,      // LAD
-  'SALVADOR PEREZ':118,     // KC
-  'SPENCER TORKELSON':116,  // DET
-  'JOSE ALTUVE':117,        // HOU
-  'AUSTIN RILEY':144,       // ATL
-  'GUNNAR HENDERSON':110,   // BAL
-  'JUAN SOTO':121,          // NYM
-  'JULIO RODRIGUEZ':136,    // SEA
-  'FERNANDO TATIS JR.':135, // SD
-  'BRENT ROOKER':133,       // ATH
-  'WILLIAM CONTRERAS':158,  // MIL
-  'MUNETAKA MURAKAMI':145,  // CWS
-  'MATT MCLAIN':113,        // CIN
-  'JUNIOR CAMINERO':139,    // TB
-  'ZACH NETO':108,          // LAA
-  'YORDAN ALVAREZ':117,     // HOU
-  'JO ADELL':108,           // LAA
-  'RONALD ACUNA JR.':144,   // ATL
-  'KYLE SCHWARBER':143,     // PHI
+  // CRAIG
+  'CAL RALEIGH':136,            // SEA
+  'NICK KURTZ':133,             // ATH (also try Nicholas)
+  'NICHOLAS KURTZ':133,         // ATH (API may use full name)
+  'JAZZ CHISHOLM JR.':147,      // NYY
+  'JOSE RAMIREZ':114,           // CLE
+  'COLSON MONTGOMERY':145,      // CWS
+  'RILEY GREENE':116,           // DET
+  'TRENT GRISHAM':147,          // NYY
+  'CORBIN CARROLL':109,         // ARI
+  'RAFAEL DEVERS':137,          // SF (moved from BOS)
+  // PALMER
+  'HUNTER GOODMAN':115,         // COL
+  'MATT OLSON':144,             // ATL
+  'KETEL MARTE':109,            // ARI
+  'EUGENIO SUAREZ':113,         // CIN (moved from SEA)
+  'TREVOR STORY':111,           // BOS
+  'JAMES WOOD':120,             // WSH
+  'MIKE TROUT':108,             // LAA
+  'AARON JUDGE':147,            // NYY
+  'CHRISTIAN YELICH':158,       // MIL
+  // ROBERTS
+  'SHEA LANGELIERS':133,        // ATH
+  'PETE ALONSO':110,            // BAL (moved from NYM)
+  'BRANDON LOWE':134,           // PIT (moved from TB)
+  'MANNY MACHADO':135,          // SD
+  'BOBBY WITT JR.':118,         // KC
+  'TAYLOR WARD':110,            // BAL (moved from LAA)
+  'PETE CROW-ARMSTRONG':112,    // CHC
+  'KYLE TUCKER':119,            // LAD (moved from HOU)
+  'SHOHEI OHTANI':119,          // LAD
+  // SIEVE
+  'SALVADOR PEREZ':118,         // KC
+  'SPENCER TORKELSON':116,      // DET
+  'JOSE ALTUVE':117,            // HOU
+  'AUSTIN RILEY':144,           // ATL
+  'GUNNAR HENDERSON':110,       // BAL
+  'JUAN SOTO':121,              // NYM
+  'JULIO RODRIGUEZ':136,        // SEA
+  'FERNANDO TATIS JR.':135,     // SD
+  'BRENT ROOKER':133,           // ATH
+  // WEILER
+  'WILLIAM CONTRERAS':158,      // MIL
+  'MUNETAKA MURAKAMI':145,      // CWS
+  'MATT MCLAIN':113,            // CIN
+  'JUNIOR CAMINERO':139,        // TB
+  'ZACH NETO':108,              // LAA
+  'YORDAN ALVAREZ':117,         // HOU
+  'JO ADELL':108,               // LAA
+  'RONALD ACUNA JR.':144,       // ATL
+  'KYLE SCHWARBER':143,         // PHI
 };
 
 function getPlayerGameInfo(playerName) {
   const u = playerName.toUpperCase();
-  // Exact full name match (from boxscore)
+  // 1. Exact full name match
   if (todayGames[u]) return todayGames[u];
-  // Last name match
-  const last = u.split(' ').slice(-1)[0];
-  if (todayGames[last]) return todayGames[last];
-  // Partial scan of boxscore keys
-  for (const key of Object.keys(todayGames)) {
-    if (key.startsWith('__team__')) continue;
-    if (key.endsWith(last)) return todayGames[key];
+  // 2. Match without suffix (Jr., Sr., II etc)
+  const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
+  if (stripped !== u && todayGames[stripped]) return todayGames[stripped];
+  // 3. Team ID lookup
+  // Check both the roster name AND common API variants (Nick/Nicholas etc)
+  const teamId = PLAYER_TEAM_IDS[u] || PLAYER_TEAM_IDS[stripped];
+  if (teamId) {
+    // For active games: find any boxscore entry on the correct team
+    // whose last name matches ours
+    const ourLastName = stripped.split(' ').slice(-1)[0];
+    for (const [key, val] of Object.entries(todayGames)) {
+      if (key.startsWith('__team__')) continue;
+      if ((val.awayId === teamId || val.homeId === teamId)) {
+        // Check if last name matches
+        const keyLast = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').split(' ').slice(-1)[0];
+        if (keyLast === ourLastName) return val;
+      }
+    }
+    // For upcoming games
+    if (todayGames['__team__'+teamId]) return todayGames['__team__'+teamId];
   }
-  // Team ID lookup for upcoming/scheduled games
-  const teamId = PLAYER_TEAM_IDS[u];
-  if (teamId && todayGames['__team__'+teamId]) return todayGames['__team__'+teamId];
   return null;
 }
 
@@ -607,18 +634,14 @@ function renderStandings() {
   const mx = Math.max(...data.map(d=>d.totalHR), 1);
   const splits = computeSplits();
   document.getElementById('standings-wrap').innerHTML = data.map((d,i) => {
-    const sp = splits[d.mgr] || {};
-    return `<div class="stand-card ${i===0?'first':''}">
+    return `<div class="stand-card ${i===0?'first':''}" onclick="goToRoster('${d.mgr}')" style="cursor:pointer">
       <div class="stand-top">
         <div class="rank-n">${i+1}</div>
-        <div><div class="mgr-name">${d.mgr}</div><div class="mgr-sub">9 players · Day ${dayOfSeason()}</div></div>
+        <div>
+          <div class="mgr-name">${d.mgr}</div>
+          <div class="mgr-sub">Click to view roster →</div>
+        </div>
         <div><div class="hr-big">${d.totalHR}</div><div class="hr-lbl">HOME RUNS</div></div>
-      </div>
-      <div class="stand-stats">
-        <div class="stat-box"><div class="stat-val ${d.pace>=d.totalHR?'pace-good':'pace-bad'}">${d.pace}</div><div class="stat-lbl">PACE</div></div>
-        <div class="stat-box"><div class="stat-val">${sp.d7 ?? 0}</div><div class="stat-lbl">LAST 7</div></div>
-        <div class="stat-box"><div class="stat-val">${sp.d14 ?? 0}</div><div class="stat-lbl">LAST 14</div></div>
-        <div class="stat-box"><div class="stat-val">${sp.d30 ?? 0}</div><div class="stat-lbl">LAST 30</div></div>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${(d.totalHR/mx*100).toFixed(1)}%"></div></div>
     </div>`;
@@ -792,6 +815,15 @@ function restoreFromIR(mgr, pos) {
 function closeModal() { document.getElementById('ir-modal').classList.remove('open'); irPending=null; }
 
 // ── NAV ───────────────────────────────────────────────────
+function goToRoster(mgr) {
+  rMgr = mgr;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-roster').classList.add('active');
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+  renderRoster();
+}
+
 function showPanel(name, btn) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));

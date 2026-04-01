@@ -249,9 +249,23 @@ let irPending = null;
 async function loadLive() {
   document.getElementById('upd-txt').textContent = 'Fetching...';
   try {
-    const res = await fetch('https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/statistics/athletes?region=us&lang=en&contentorigin=espn&isqualified=false&limit=500&page=1&category=homeRuns&seasontype=2&season=2026&sort=homeRuns%3Adesc');
-    if (!res.ok) throw new Error();
-    const j = await res.json();
+    const urls = [
+      'https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/statistics/athletes?region=us&lang=en&contentorigin=espn&isqualified=false&limit=500&page=1&category=homeRuns&seasontype=2&sort=homeRuns%3Adesc',
+      'https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/statistics/athletes?region=us&lang=en&contentorigin=espn&isqualified=false&limit=500&page=1&category=homeRuns&seasontype=2&sort=homeRuns%3Adesc&season=2026',
+    ];
+    let j = null;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        console.log('ESPN status:', res.status, url);
+        if (!res.ok) continue;
+        j = await res.json();
+        console.log('ESPN keys:', Object.keys(j));
+        console.log('Athletes count:', j?.athletes?.length);
+        break;
+      } catch(e) { console.warn('URL failed:', e); }
+    }
+    if (!j) throw new Error('No valid ESPN response');
     liveHR = {};
     (j?.athletes||[]).forEach(e => {
       const a = e.athlete||e;
@@ -259,10 +273,13 @@ async function loadLive() {
       const hrs = parseInt(e.statistics?.[0]?.value)||0;
       liveHR[full] = hrs;
       liveHR[full.split(' ').slice(-1)[0]] = hrs;
+      if (hrs > 0) console.log(full, hrs);
     });
-    document.getElementById('upd-txt').textContent = 'Updated ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const ct = Object.values(liveHR).filter(v=>v>0).length;
+    document.getElementById('upd-txt').textContent = `Updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ct} players with HRs`;
   } catch(e) {
-    document.getElementById('upd-txt').textContent = 'Season not yet started — showing projections';
+    console.error('ESPN error:', e);
+    document.getElementById('upd-txt').textContent = 'Could not load live data — check F12 console';
   }
   renderAll();
 }

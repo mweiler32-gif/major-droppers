@@ -339,10 +339,36 @@ async function fetchHRLeaders(startDate, endDate) {
   return map;
 }
 
-async function loadLive() {
+let lastHRFetch = 0;
+const HR_CACHE_KEY = 'dingers2026_hrcache';
+
+async function loadLive(force = false) {
+  const now = Date.now();
+  const TEN_MIN = 10 * 60 * 1000;
+
+  // Use cache if recent enough and not forced
+  if (!force && (now - lastHRFetch) < TEN_MIN) {
+    renderStandings(); renderActivity(); renderSplits();
+    return;
+  }
+
+  // Try localStorage cache first for instant render
+  try {
+    const cached = JSON.parse(localStorage.getItem(HR_CACHE_KEY) || 'null');
+    if (cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN) {
+      liveHR = cached.season;
+      splitHR = { d7: cached.d7, d14: cached.d14, d30: cached.d30 };
+      lastHRFetch = cached.ts;
+      document.getElementById('upd-txt').textContent = `Updated ${new Date(cached.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · cached`;
+      renderStandings(); renderActivity(); renderSplits();
+      return;
+    }
+  } catch(e) {}
+
   document.getElementById('upd-txt').textContent = 'Fetching...';
   try {
     const today = todayStr();
+    // Fetch season total first, then splits in parallel
     const [season, d7, d14, d30] = await Promise.all([
       fetchHRLeaders('2026-03-25', today),
       fetchHRLeaders(dateStr(7),  today),
@@ -351,6 +377,14 @@ async function loadLive() {
     ]);
     liveHR = season;
     splitHR = { d7, d14, d30 };
+    lastHRFetch = Date.now();
+    // Cache to localStorage
+    try {
+      localStorage.setItem(HR_CACHE_KEY, JSON.stringify({
+        date: today, ts: lastHRFetch,
+        season, d7, d14, d30
+      }));
+    } catch(e) {}
     const ct = Object.values(season).filter(v=>v>0).length;
     document.getElementById('upd-txt').textContent = `Updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ct} players with HRs`;
   } catch(e) {
@@ -361,24 +395,37 @@ async function loadLive() {
 }
 
 // ── TODAY'S GAMES ─────────────────────────────────────────
-async function loadTodayGames() {
+let lastGamesFetch = 0;
+const GAMES_CACHE_MS = 2 * 60 * 1000; // 2 minutes
+
+async function loadTodayGames(force = false) {
+  const now = Date.now();
+  // Skip if recently fetched and not forced and no live games running
+  if (!force && (now - lastGamesFetch) < GAMES_CACHE_MS && !rosterAutoRefresh) {
+    renderRoster(); renderTodaysDingers(); renderYesterdaysDingers();
+    return;
+  }
   try {
     const today = todayStr();
-    console.log('Fetching schedule for:', today);
     const schedRes = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&gameType=R&hydrate=linescore,teams`);
-    console.log('Schedule status:', schedRes.status);
     if (!schedRes.ok) { console.error('Schedule failed:', schedRes.status); return; }
+    lastGamesFetch = Date.now();
     const j = await schedRes.json();
     const games = j?.dates?.[0]?.games || [];
-    console.log('Games today:', games.length);
 
 
     todayGames = {};
     let hasLive = false;
 
-    // For live/final games fetch boxscores; for upcoming just grab schedule info
-    const boxFetches = games
-      .filter(g => ['Live','Final'].includes(g.status?.abstractGameState))
+    // Only fetch boxscores for games involving our league's teams (saves ~13 API calls)
+    const leagueTeamIds = new Set(Object.values(PLAYER_TEAM_IDS));
+    const relevantGames = games.filter(g => {
+      const awayId = g.teams?.away?.team?.id;
+      const homeId = g.teams?.home?.team?.id;
+      return leagueTeamIds.has(awayId) || leagueTeamIds.has(homeId);
+    });
+    const activeRelevant = relevantGames.filter(g => ['Live','Final'].includes(g.status?.abstractGameState));
+    const boxFetches = activeRelevant
       .map(g => fetch(`https://statsapi.mlb.com/api/v1/game/${g.gamePk}/boxscore`)
         .then(r => r.ok ? r.json() : null)
         .then(bs => ({ gamePk: g.gamePk, bs }))

@@ -619,7 +619,7 @@ function renderYesterdaysDingers() {
   try {
     const raw = localStorage.getItem(YESTERDAY_KEY);
     if (!raw) {
-      el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">No data yet — check back after today's games.</div>';
+      el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">No data yet — check back after today\'s games.</div>';
       return;
     }
     const data = JSON.parse(raw);
@@ -679,7 +679,7 @@ function renderYesterdaysDingers() {
       </div>`;
     }).join('');
   } catch(e) {
-    el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">Could not load yesterday's data.</div>';
+    el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">Could not load yesterday&#39;s data.</div>';
   }
 }
 

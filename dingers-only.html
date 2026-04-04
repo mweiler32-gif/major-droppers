@@ -278,7 +278,6 @@ const MANAGERS = ['CRAIG','PALMER','ROBERTS','SIEVE','WEILER'];
 const POSITIONS = ['C','1B','2B','SS','3B','LF','CF','RF','DH'];
 const SK = 'dingers2026_v4';
 const TODAY_STATS_KEY = 'dingers2026_todaystats';
-const YESTERDAY_KEY = 'dingers2026_yesterday';
 
 // ── STATE ─────────────────────────────────────────────────
 function mkState() { return { ir: Object.fromEntries(MANAGERS.map(m=>[m,{}])) }; }
@@ -293,21 +292,19 @@ let irPending = null;
 let rosterAutoRefresh = null;
 
 // ── HR DATA ───────────────────────────────────────────────
+const normName = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
 function getHR(name) {
   if (!name) return null;
-  const u = name.toUpperCase();
-  // Exact full name match first
+  const u = normName(name);
   if (liveHR[u] !== undefined) return liveHR[u];
-  // Try without suffix (Jr., Sr., II, III etc)
   const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
   if (stripped !== u && liveHR[stripped] !== undefined) return liveHR[stripped];
-  // Try last name only if it's unambiguous (not a suffix)
   const parts = u.split(' ');
   const last = parts[parts.length - 1];
   if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
     if (liveHR[last] !== undefined) return liveHR[last];
   } else if (parts.length >= 3) {
-    // Use second-to-last for names like "WITT JR."
     const secondLast = parts[parts.length - 2];
     if (liveHR[secondLast] !== undefined) return liveHR[secondLast];
   }
@@ -320,11 +317,15 @@ async function fetchHRLeaders(startDate, endDate) {
   if (!res.ok) throw new Error('Status ' + res.status);
   const j = await res.json();
   const map = {};
+  // Helper to normalize accented chars: José -> JOSE, Ramírez -> RAMIREZ
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
   (j?.leagueLeaders?.[0]?.leaders || []).forEach(e => {
-    const full = (e.person?.fullName || '').toUpperCase();
+    const raw = (e.person?.fullName || '');
+    const full = norm(raw);
     const hrs = parseInt(e.value) || 0;
     if (!full) return;
-    // Index by full name
+    // Index by normalized full name
     map[full] = hrs;
     // Index by name without suffix
     const stripped = full.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
@@ -333,7 +334,7 @@ async function fetchHRLeaders(startDate, endDate) {
     const parts = full.split(' ');
     const last = parts[parts.length - 1];
     if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
-      if (!map[last]) map[last] = hrs; // don't overwrite a full name match
+      if (!map[last]) map[last] = hrs;
     }
   });
   return map;
@@ -344,7 +345,7 @@ const HR_CACHE_KEY = 'dingers2026_hrcache';
 
 async function loadLive(force = false) {
   const now = Date.now();
-  const TEN_MIN = 10 * 60 * 1000;
+  const TEN_MIN = 5 * 60 * 1000; // 5 min cache
 
   // Use cache if recent enough and not forced
   if (!force && (now - lastHRFetch) < TEN_MIN) {
@@ -355,7 +356,7 @@ async function loadLive(force = false) {
   // Try localStorage cache first for instant render
   try {
     const cached = JSON.parse(localStorage.getItem(HR_CACHE_KEY) || 'null');
-    if (cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN) {
+    if (!force && cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN) {
       liveHR = cached.season;
       splitHR = { d7: cached.d7, d14: cached.d14, d30: cached.d30 };
       lastHRFetch = cached.ts;
@@ -468,7 +469,7 @@ async function loadTodayGames(force = false) {
           batters.forEach(pid => {
             const p = playerMap['ID'+pid];
             if (!p) return;
-            const name = (p.person?.fullName || '').toUpperCase();
+            const name = normName(p.person?.fullName || '');
             const st = p.stats?.batting || {};
             const entry = {
               ...gameInfo,
@@ -561,7 +562,7 @@ const PLAYER_TEAM_IDS = {
 };
 
 function getPlayerGameInfo(playerName) {
-  const u = playerName.toUpperCase();
+  const u = normName(playerName);
   // 1. Exact full name match
   if (todayGames[u]) return todayGames[u];
   // 2. Match without suffix (Jr., Sr., II etc)
@@ -613,46 +614,65 @@ function formatGameInfo(gi, playerName) {
 }
 
 // ── YESTERDAY'S DINGERS ─────────────────────────────────
-function renderYesterdaysDingers() {
+async function renderYesterdaysDingers() {
   const el = document.getElementById('yesterdays-dingers');
   if (!el) return;
+  el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:12px;color:var(--cream-dim);padding:8px 0">Loading...</div>';
   try {
-    const raw = localStorage.getItem(YESTERDAY_KEY);
-    if (!raw) {
-      el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">No data yet — check back after today\'s games.</div>';
+    const yesterday = dateStr(1);
+
+    // Step 1: get yesterday's schedule for our league teams only
+    const schedRes = await fetch(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${yesterday}&gameType=R&hydrate=teams`);
+    if (!schedRes.ok) throw new Error('Schedule error');
+    const schedJ = await schedRes.json();
+    const games = schedJ?.dates?.[0]?.games || [];
+
+    // Only fetch boxscores for games involving our league players' teams
+    const leagueTeamIds = new Set(Object.values(PLAYER_TEAM_IDS));
+    const relevantGames = games.filter(g => {
+      return leagueTeamIds.has(g.teams?.away?.team?.id) || leagueTeamIds.has(g.teams?.home?.team?.id);
+    });
+
+    if (!relevantGames.length) {
+      el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">No league games yesterday.</div>';
       return;
     }
-    const data = JSON.parse(raw);
-    const games = data.games || {};
 
-    // Build lookup mirroring getPlayerGameInfo but from yesterday's snapshot
-    const lookup = (playerName) => {
-      const u = playerName.toUpperCase();
-      if (games[u]) return games[u];
-      const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
-      if (stripped !== u && games[stripped]) return games[stripped];
-      const teamId = PLAYER_TEAM_IDS[u] || PLAYER_TEAM_IDS[stripped];
-      if (teamId) {
-        const ourLast = stripped.split(' ').slice(-1)[0];
-        for (const [k, v] of Object.entries(games)) {
-          if ((v.awayId === teamId || v.homeId === teamId)) {
-            const kLast = k.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').split(' ').slice(-1)[0];
-            if (kLast === ourLast) return v;
-          }
-        }
-      }
-      return null;
-    };
+    // Step 2: fetch boxscores
+    const boxes = await Promise.all(relevantGames.map(g =>
+      fetch(`https://statsapi.mlb.com/api/v1/game/${g.gamePk}/boxscore`)
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+    ));
 
+    // Step 3: build HR map from boxscores { normalizedName -> hrs }
+    const hrMap = {};
+    boxes.forEach(bs => {
+      if (!bs) return;
+      ['away','home'].forEach(side => {
+        const batters = bs?.teams?.[side]?.batters || [];
+        const playerMap = bs?.teams?.[side]?.players || {};
+        batters.forEach(pid => {
+          const p = playerMap['ID'+pid];
+          if (!p) return;
+          const name = normName(p.person?.fullName || '');
+          const hrs = parseInt(p.stats?.batting?.homeRuns) || 0;
+          if (hrs > 0) hrMap[name] = (hrMap[name] || 0) + hrs;
+        });
+      });
+    });
+
+    // Step 4: match against our league players
     const dingers = [];
     MANAGERS.forEach(mgr => {
       POSITIONS.forEach(pos => {
         const irData = S.ir[mgr]?.[pos];
         const player = irData?.replacement || ROSTERS[mgr][pos];
-        const gi = lookup(player);
-        if (gi && gi.hr > 0) {
-          dingers.push({ player, mgr, pos, hr: gi.hr, away: gi.away, home: gi.home });
-        }
+        const key = normName(player);
+        const stripped = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
+        const last = stripped.split(' ').slice(-1)[0];
+        const hrs = hrMap[key] || hrMap[stripped] || 0;
+        if (hrs > 0) dingers.push({ player, mgr, pos, hr: hrs });
       });
     });
 
@@ -664,22 +684,19 @@ function renderYesterdaysDingers() {
     }
 
     el.innerHTML = dingers.map(d => {
-      const awayShort = (d.away||'').split(' ').slice(-1)[0];
-      const homeShort = (d.home||'').split(' ').slice(-1)[0];
-      const gameCtx = `${awayShort} @ ${homeShort} (F)`;
-      const hrBalls = '💥'.repeat(Math.min(d.hr, 4));
+      const hrBalls = String.fromCodePoint(0x1F4A5).repeat(Math.min(d.hr, 4));
       return `<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:Barlow Condensed,sans-serif;">
         <div>
           <span style="font-size:14px;font-weight:700">${d.player}</span>
-          <span style="font-size:11px;color:var(--cream-dim);margin-left:8px">${d.mgr} · ${d.pos}</span>
-          <div style="font-size:11px;color:var(--cream-dim);margin-top:1px">${gameCtx}</div>
+          <span style="font-size:11px;color:var(--cream-dim);margin-left:8px">${d.mgr} &middot; ${d.pos}</span>
         </div>
         <div style="font-size:20px">${hrBalls}</div>
         <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--brown-light)">${d.hr}</div>
       </div>`;
     }).join('');
   } catch(e) {
-    el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">Could not load yesterday&#39;s data.</div>';
+    console.error('Yesterday dingers:', e);
+    el.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:13px;color:var(--cream-dim);padding:8px 0">No league players homered yesterday.</div>';
   }
 }
 
@@ -736,19 +753,12 @@ function loadTodayStats() {
     // Only load if same baseball day
     if (data.date !== todayStr()) {
       // It's a new day - save yesterday's data before clearing
-      saveYesterdayStats(data);
-      localStorage.removeItem(TODAY_STATS_KEY);
+        localStorage.removeItem(TODAY_STATS_KEY);
       return;
     }
     // Restore into todayGames
     Object.assign(todayGames, data.games || {});
     Object.assign(todayGames, data.teamEntries || {});
-  } catch(e) {}
-}
-
-function saveYesterdayStats(todayData) {
-  try {
-    localStorage.setItem(YESTERDAY_KEY, JSON.stringify(todayData));
   } catch(e) {}
 }
 

@@ -219,7 +219,7 @@
       });
       const [scores, setScores] = useState({});
       const [currentRound, setCurrentRound] = useState(0);
-      const [tournamentName, setTournamentName] = useState('THE PLAYERS Championship 2026');
+      const [tournamentName, setTournamentName] = useState('Masters 2026');
       const [view, setView] = useState('dashboard');
       const [champion, setChampion] = useState(null);
       const [connected, setConnected] = useState(false);
@@ -1070,7 +1070,7 @@
                 onClick={loadPreloadedField}
                 className="w-full mb-2 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all"
               >
-                ⚡ Load PLAYERS Championship Field (123 golfers)
+                ⚡ Load PLAYERS Championship Field (123 golfers, pre-sorted by odds)
               </button>
               <p className="text-xs text-gray-500 text-center mb-3">Pre-sorted by betting odds • Source: GolfOdds.com</p>
               
@@ -2001,49 +2001,83 @@
             alert('Please set a tournament name first.');
             return;
           }
-          
+
+          // Helper to strip Infinity/NaN/undefined from any object for Firebase
+          const sanitize = (obj) => {
+            if (obj === null || obj === undefined) return null;
+            if (typeof obj === 'number') {
+              return isFinite(obj) ? obj : null;
+            }
+            if (Array.isArray(obj)) return obj.map(sanitize);
+            if (typeof obj === 'object') {
+              const out = {};
+              for (const [k, v] of Object.entries(obj)) {
+                const sanitized = sanitize(v);
+                if (sanitized !== undefined) out[k] = sanitized;
+              }
+              return out;
+            }
+            return obj;
+          };
+
           // Calculate final standings and payouts
-          const finalStandings = getFinalStandings();
-          
-          // Determine which rounds are complete
+          let finalStandings = [];
+          try { finalStandings = getFinalStandings() || []; } catch(e) { finalStandings = []; }
+
+          // Determine which rounds are complete — fall back to checking scores object if liveScores empty
           const isRoundComplete = (roundIndex) => {
-            if (liveScores.length === 0) return false;
-            return liveScores.every(g => {
-              const roundScore = g.rounds?.[roundIndex];
+            if (liveScores.length > 0) {
+              return liveScores.every(g => {
+                const roundScore = g.rounds?.[roundIndex];
+                return roundScore !== null && roundScore !== undefined;
+              });
+            }
+            // Fallback: check Firebase scores object
+            const allGolfers = Object.values(teams).flat();
+            if (allGolfers.length === 0) return false;
+            return allGolfers.every(g => {
+              const s = getGolferScoreFromScores(scores, g);
+              const roundScore = s?.rounds?.[roundIndex];
               return roundScore !== null && roundScore !== undefined;
             });
           };
           const completedRounds = ROUNDS.map((_, i) => isRoundComplete(i));
-          const finalPayouts = calculatePayouts(completedRounds);
-          
-          // Build daily winners - clean up data for Firebase (no Infinity values)
-          const dailyWinners = ROUNDS.map((round, i) => {
-            const lowGolfer = getDailyLowGolfer(i);
-            const lowTeam = getDailyLowTeam(i);
-            return {
-              round: round,
-              lowGolfer: lowGolfer ? { golfer: lowGolfer.golfer, score: lowGolfer.score, owner: lowGolfer.owner } : null,
-              lowTeam: lowTeam ? { player: lowTeam.player, total: lowTeam.total } : null
-            };
-          }).filter(d => d.lowGolfer || d.lowTeam);
-          
-          const historyEntry = {
+
+          let finalPayouts = {};
+          try { finalPayouts = calculatePayouts(completedRounds) || {}; } catch(e) { finalPayouts = {}; }
+
+          // Build daily winners
+          let dailyWinners = [];
+          try {
+            dailyWinners = ROUNDS.map((round, i) => {
+              let lowGolfer = null, lowTeam = null;
+              try { lowGolfer = getDailyLowGolfer(i); } catch(e) {}
+              try { lowTeam = getDailyLowTeam(i); } catch(e) {}
+              return {
+                round,
+                lowGolfer: lowGolfer ? { golfer: lowGolfer.golfer, score: lowGolfer.score, owner: lowGolfer.owner } : null,
+                lowTeam: lowTeam ? { player: lowTeam.player, total: lowTeam.total } : null
+              };
+            }).filter(d => d.lowGolfer || d.lowTeam);
+          } catch(e) { dailyWinners = []; }
+
+          const historyEntry = sanitize({
             name: tournamentName,
             date: new Date().toISOString(),
             teams: teams,
             scores: scores || {},
             champion: champion || null,
-            standings: finalStandings || [],
-            payouts: finalPayouts || {},
-            dailyWinners: dailyWinners || []
-          };
-          
+            standings: finalStandings,
+            payouts: finalPayouts,
+            dailyWinners: dailyWinners
+          });
+
           try {
             await database.ref('history').push(historyEntry);
             alert(`✅ "${tournamentName}" saved to history!`);
           } catch (err) {
             console.error('Error saving to history:', err);
-            alert('Error saving tournament. Please try again.');
+            alert(`Error saving tournament: ${err.message || err}`);
           }
         };
         

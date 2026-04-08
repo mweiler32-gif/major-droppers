@@ -311,27 +311,86 @@ function getHR(name) {
   return null;
 }
 
-async function fetchHRLeaders(startDate, endDate) {
-  const url = `https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns&season=2026&leaderGameTypes=R&limit=500&startDate=${startDate}&endDate=${endDate}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Status ' + res.status);
-  const j = await res.json();
-  const map = {};
-  // Helper to normalize accented chars: José -> JOSE, Ramírez -> RAMIREZ
-  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+// MLB player IDs for direct stat lookup (bypasses leaderboard minimum threshold)
+const PLAYER_IDS = {
+  // All IDs verified from baseballsavant.mlb.com URLs
+  'CAL RALEIGH': 663728,
+  'NICK KURTZ': 701762,
+  'JAZZ CHISHOLM JR.': 665750,
+  'JOSE RAMIREZ': 608070,
+  'COLSON MONTGOMERY': 695657,
+  'RILEY GREENE': 682985,
+  'TRENT GRISHAM': 663757,
+  'CORBIN CARROLL': 682998,
+  'RAFAEL DEVERS': 646240,
+  'HUNTER GOODMAN': 696100,
+  'MATT OLSON': 621566,
+  'KETEL MARTE': 606466,
+  'EUGENIO SUAREZ': 553993,
+  'TREVOR STORY': 596115,
+  'JAMES WOOD': 694192,
+  'MIKE TROUT': 545361,
+  'AARON JUDGE': 592450,
+  'CHRISTIAN YELICH': 592885,
+  'SHEA LANGELIERS': 669127,
+  'PETE ALONSO': 624413,
+  'BRANDON LOWE': 664040,
+  'MANNY MACHADO': 592518,
+  'BOBBY WITT JR.': 677951,
+  'TAYLOR WARD': 621493,
+  'PETE CROW-ARMSTRONG': 691718,
+  'KYLE TUCKER': 663656,
+  'SHOHEI OHTANI': 660271,
+  'SALVADOR PEREZ': 521692,
+  'SPENCER TORKELSON': 679529,
+  'JOSE ALTUVE': 514888,
+  'AUSTIN RILEY': 663586,
+  'GUNNAR HENDERSON': 683002,
+  'JUAN SOTO': 665742,
+  'JULIO RODRIGUEZ': 677594,
+  'FERNANDO TATIS JR.': 665487,
+  'BRENT ROOKER': 667670,
+  'WILLIAM CONTRERAS': 661388,
+  'MUNETAKA MURAKAMI': 808959,
+  'MATT MCLAIN': 680574,
+  'JUNIOR CAMINERO': 691406,
+  'ZACH NETO': 687263,
+  'YORDAN ALVAREZ': 670541,
+  'JO ADELL': 666176,
+  'RONALD ACUNA JR.': 660670,
+  'KYLE SCHWARBER': 656941,
+}
 
-  (j?.leagueLeaders?.[0]?.leaders || []).forEach(e => {
-    const raw = (e.person?.fullName || '');
-    const full = norm(raw);
-    const hrs = parseInt(e.value) || 0;
-    if (!full) return;
-    // Index by normalized full name
-    map[full] = hrs;
-    // Index by name without suffix
-    const stripped = full.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
-    if (stripped !== full) map[stripped] = hrs;
-    // Index by last name only if not a suffix
-    const parts = full.split(' ');
+async function fetchHRLeaders(startDate, endDate) {
+  // Fetch all league players directly by MLB ID - bypasses leaderboard threshold
+  // For season totals (startDate = season start), fetch season stats
+  // For splits (recent dates), fetch with date range via gamelog approach
+  const isSeason = startDate <= '2026-03-25';
+
+  const fetches = Object.entries(PLAYER_IDS).map(async ([name, id]) => {
+    try {
+      const url = isSeason
+        ? `https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=season&season=2026&group=hitting`
+        : `https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=byDateRange&season=2026&startDate=${startDate}&endDate=${endDate}&group=hitting`;
+      const r = await fetch(url);
+      if (!r.ok) return { name, hrs: 0 };
+      const d = await r.json();
+      const splits = d?.stats?.[0]?.splits || [];
+      const hrs = parseInt(splits[0]?.stat?.homeRuns) || 0;
+      return { name, hrs };
+    } catch(e) {
+      return { name, hrs: 0 };
+    }
+  });
+
+  const results = await Promise.all(fetches);
+  const map = {};
+  results.forEach(({ name, hrs }) => {
+    const key = normName(name);
+    map[key] = hrs;
+    const stripped = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+    if (stripped !== key) map[stripped] = hrs;
+    const parts = key.split(' ');
     const last = parts[parts.length - 1];
     if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
       if (!map[last]) map[last] = hrs;
@@ -415,7 +474,12 @@ async function loadTodayGames(force = false) {
     const games = j?.dates?.[0]?.games || [];
 
 
-    todayGames = {};
+    // Preserve entries with HRs from previous fetches so Final game stats aren't lost
+    const preserved = {};
+    Object.entries(todayGames).forEach(([k,v]) => {
+      if (v && v.hr > 0) preserved[k] = v;
+    });
+    todayGames = { ...preserved };
     let hasLive = false;
 
     // Only fetch boxscores for games involving our league's teams (saves ~13 API calls)

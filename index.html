@@ -219,7 +219,7 @@
       });
       const [scores, setScores] = useState({});
       const [currentRound, setCurrentRound] = useState(0);
-      const [tournamentName, setTournamentName] = useState('Masters 2026');
+      const [tournamentName, setTournamentName] = useState('THE PLAYERS Championship 2026');
       const [view, setView] = useState('dashboard');
       const [champion, setChampion] = useState(null);
       const [connected, setConnected] = useState(false);
@@ -2020,31 +2020,9 @@
             return obj;
           };
 
-          // Calculate final standings and payouts
-          let finalStandings = [];
-          try { finalStandings = getFinalStandings() || []; } catch(e) { finalStandings = []; }
-
-          // Determine which rounds are complete — fall back to checking scores object if liveScores empty
-          const isRoundComplete = (roundIndex) => {
-            if (liveScores.length > 0) {
-              return liveScores.every(g => {
-                const roundScore = g.rounds?.[roundIndex];
-                return roundScore !== null && roundScore !== undefined;
-              });
-            }
-            // Fallback: check Firebase scores object
-            const allGolfers = Object.values(teams).flat();
-            if (allGolfers.length === 0) return false;
-            return allGolfers.every(g => {
-              const s = getGolferScoreFromScores(scores, g);
-              const roundScore = s?.rounds?.[roundIndex];
-              return roundScore !== null && roundScore !== undefined;
-            });
-          };
-          const completedRounds = ROUNDS.map((_, i) => isRoundComplete(i));
-
-          let finalPayouts = {};
-          try { finalPayouts = calculatePayouts(completedRounds) || {}; } catch(e) { finalPayouts = {}; }
+          // Use already-computed payouts and standings from render (these are what the app is displaying)
+          const finalStandings = standings || [];
+          const finalPayouts = payouts || {};
 
           // Build daily winners
           let dailyWinners = [];
@@ -2085,17 +2063,27 @@
         <div className="space-y-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="font-bold text-gray-800 mb-3">Tournament</h3>
-            <input
-              type="text"
-              defaultValue={tournamentName}
-              onBlur={(e) => {
-                setTournamentName(e.target.value);
-                saveToFirebase({ tournamentName: e.target.value });
+            <select
+              value={tournamentName}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) return;
+                setTournamentName(val);
+                saveToFirebase({ tournamentName: val });
               }}
-              onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
-              placeholder="Enter tournament name..."
-            />
+            >
+              {[
+                'THE PLAYERS Championship 2026',
+                'Masters 2026',
+                'PGA Championship 2026',
+                'US Open 2026',
+                'The Open Championship 2026'
+              ].map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-2">Changing this updates the active tournament name</p>
           </div>
           
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -2182,13 +2170,41 @@
       // History View - Past Tournaments
       const HistoryView = () => {
         const [selectedTournament, setSelectedTournament] = useState(null);
-        
+        const [editingPayouts, setEditingPayouts] = useState(false);
+        const [payoutDraft, setPayoutDraft] = useState({});
+        const [savingPayouts, setSavingPayouts] = useState(false);
+
+        const startEditPayouts = (t) => {
+          // Pre-populate with existing payouts, or $0 for all players if missing
+          const existing = t.payouts || {};
+          const draft = {};
+          DEFAULT_PLAYERS.forEach(p => {
+            draft[p] = existing[p] !== undefined ? existing[p] : 0;
+          });
+          setPayoutDraft(draft);
+          setEditingPayouts(true);
+        };
+
+        const savePayouts = async (t) => {
+          setSavingPayouts(true);
+          try {
+            await database.ref(`history/${t.id}/payouts`).set(payoutDraft);
+            // Update local state so UI reflects change immediately
+            setSelectedTournament({ ...t, payouts: payoutDraft });
+            setEditingPayouts(false);
+            alert('✅ Payouts updated!');
+          } catch (err) {
+            alert(`Error saving payouts: ${err.message || err}`);
+          }
+          setSavingPayouts(false);
+        };
+
         if (selectedTournament) {
           const t = selectedTournament;
           return (
             <div className="space-y-4">
               <button
-                onClick={() => setSelectedTournament(null)}
+                onClick={() => { setSelectedTournament(null); setEditingPayouts(false); }}
                 className="text-blue-600 font-medium flex items-center gap-1"
               >
                 ← Back to History
@@ -2222,21 +2238,74 @@
               
               {/* Payouts */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3">
+                <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3 flex items-center justify-between">
                   <h3 className="text-white font-bold">💰 Final Payouts</h3>
+                  {!editingPayouts && (
+                    <button
+                      onClick={() => startEditPayouts(t)}
+                      className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg transition-colors"
+                    >
+                      ✏️ Edit
+                    </button>
+                  )}
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {Object.entries(t.payouts || {})
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([player, amount]) => (
-                      <div key={player} className="flex items-center justify-between px-4 py-2">
-                        <span className="font-medium text-gray-700">{player}</span>
-                        <span className={`font-bold ${amount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                          ${amount}
-                        </span>
+
+                {editingPayouts ? (
+                  <div className="p-4 space-y-3">
+                    <p className="text-xs text-gray-500">Enter gross payout per player (before subtracting $70 buy-in)</p>
+                    {DEFAULT_PLAYERS.map(player => (
+                      <div key={player} className="flex items-center gap-3">
+                        <span className="font-medium text-gray-700 w-20">{player}</span>
+                        <div className="flex items-center gap-1 flex-1">
+                          <span className="text-gray-500">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={payoutDraft[player] || 0}
+                            onChange={(e) => setPayoutDraft({ ...payoutDraft, [player]: parseInt(e.target.value) || 0 })}
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 text-right font-mono"
+                          />
+                        </div>
                       </div>
                     ))}
-                </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => savePayouts(t)}
+                        disabled={savingPayouts}
+                        className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {savingPayouts ? 'Saving...' : '💾 Save Payouts'}
+                      </button>
+                      <button
+                        onClick={() => setEditingPayouts(false)}
+                        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {Object.entries(t.payouts || {})
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([player, amount]) => (
+                        <div key={player} className="flex items-center justify-between px-4 py-2">
+                          <span className="font-medium text-gray-700">{player}</span>
+                          <div className="text-right">
+                            <span className={`font-bold ${amount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                              ${amount}
+                            </span>
+                            <span className={`ml-2 text-sm ${(amount - ENTRY_FEE) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              ({(amount - ENTRY_FEE) >= 0 ? '+' : ''}${amount - ENTRY_FEE})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    {Object.keys(t.payouts || {}).length === 0 && (
+                      <p className="text-gray-400 text-center py-4 text-sm">No payout data — tap Edit to add</p>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* Daily Winners */}
@@ -2304,7 +2373,7 @@
                   {tournamentHistory.map(t => (
                     <button
                       key={t.id}
-                      onClick={() => setSelectedTournament(t)}
+                      onClick={() => { setSelectedTournament(t); setEditingPayouts(false); }}
                       className="w-full text-left bg-gray-50 hover:bg-gray-100 rounded-lg p-4 transition-colors"
                     >
                       <div className="font-semibold text-gray-800">{t.name}</div>

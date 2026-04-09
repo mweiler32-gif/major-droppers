@@ -438,17 +438,17 @@
             let pos, name, score, today, thru, r1, r2, r3, r4, isCut;
             
             if (format === 'final') {
-              // Final format CSV: 0=Pos, 1=Player, 2=Score, 3=R1, 4=R2, 5=R3, 6=R4
-              const rawPos = row[0]?.trim(); // index 0
+              // Final format: 0=Pos, 1=seed(skip), 2=Player, 3=Score, 4=R1, 5=R2, 6=R3, 7=R4
+              const rawPos = row[0]?.trim();
               pos = rawPos?.replace(/[T\s"]/g, '');
-              name = row[1]?.trim(); // index 1
-              score = row[2]?.trim(); // index 2
+              name = row[2]?.trim();
+              score = row[3]?.trim();
               today = null;
               thru = 'F';
-              r1 = row[3]; // index 3
-              r2 = row[4]; // index 4
-              r3 = row[5]; // index 5
-              r4 = row[6]; // index 6
+              r1 = row[4];
+              r2 = row[5];
+              r3 = row[6];
+              r4 = row[7];
               
               // Check if player missed cut - in final format, cut players have:
               // - POS = "-" or "CUT" or "MC"
@@ -464,17 +464,17 @@
               // Skip header rows
               if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
             } else {
-              // In-progress format: CSV drops blank col A, so: 0=Pos, 1=Name, 2=Score, 3=Today, 4=Thru, 5=R1, 6=R2, 7=R3, 8=R4, 9=TOT
-              const rawPos = row[0]?.trim(); // Column B (index 0 in CSV)
+              // In-progress format: 0=Pos, 1=seed(skip), 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1, 7=R2, 8=R3, 9=R4
+              const rawPos = row[0]?.trim();
               pos = rawPos?.replace(/[T\s"]/g, '');
-              name = row[1]?.trim(); // Column C (index 1)
-              score = row[2]?.trim(); // Column D (index 2)
-              today = row[3]?.trim(); // Column E (index 3)
-              thru = row[4]?.trim()?.replace(/\*/g, ''); // Column F (index 4)
-              r1 = row[5]; // Column G (index 5)
-              r2 = row[6]; // Column H (index 6)
-              r3 = row[7]; // Column I (index 7)
-              r4 = row[8]; // Column J (index 8)
+              name = row[2]?.trim();
+              score = row[3]?.trim();
+              today = row[4]?.trim();
+              thru = row[5]?.trim()?.replace(/\*/g, '');
+              r1 = row[6];
+              r2 = row[7];
+              r3 = row[8];
+              r4 = row[9];
               
               // Check if player missed cut
               isCut = rawPos?.toUpperCase() === 'CUT' || 

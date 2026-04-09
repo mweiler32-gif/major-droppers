@@ -388,8 +388,7 @@
             const header = rows[0];
             
             // Check header row for format clues
-            // Final format has EARNINGS column, in-progress has TODAY/THRU
-            const headerStr = header.join(' ').toUpperCase();
+            const headerStr = (header || []).join(' ').toUpperCase();
             if (headerStr.includes('EARNINGS') || headerStr.includes('FEDEX')) {
               return 'final';
             }
@@ -397,18 +396,19 @@
               return 'in-progress';
             }
             
-            // Fallback: check data structure
+            // Fallback: check if column C looks like names (in-progress) or column H has big numbers (final)
             for (let i = 1; i < Math.min(rows.length, 10); i++) {
-              const colE = rows[i]?.[4];
+              const colC = rows[i]?.[2];
+              const colH = rows[i]?.[7];
               
-              // If column E has a round score (60-90), it's final format (E=R1)
+              // Final format: column E has round scores (60-90)
+              const colE = rows[i]?.[4];
               if (colE && !isNaN(parseInt(colE)) && parseInt(colE) >= 60 && parseInt(colE) <= 90) {
                 return 'final';
               }
               
-              // If column H has a round score, it's in-progress format (H=R1)
-              const colH = rows[i]?.[7];
-              if (colH && !isNaN(parseInt(colH)) && parseInt(colH) >= 60 && parseInt(colH) <= 90) {
+              // In-progress: column C has a player name (contains space and letters)
+              if (colC && colC.includes(' ') && /[a-zA-Z]{2,}/.test(colC)) {
                 return 'in-progress';
               }
             }
@@ -468,18 +468,17 @@
               // Skip header rows
               if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
             } else {
-              // In-progress format: B=Pos, C=seed(ignore), D=Name, E=Score, F=Today, G=Thru, H-K=R1-R4
+              // In-progress format: A=blank, B=Pos, C=Name, D=Score, E=Today, F=Thru, G=R1, H=R2, I=R3, J=R4, K=TOT
               const rawPos = row[1]?.trim(); // Column B
               pos = rawPos?.replace(/[T\s"]/g, '');
-              // row[2] is seed/ranking - ignore
-              name = row[3]?.trim(); // Column D
-              score = row[4]?.trim(); // Column E
-              today = row[5]?.trim(); // Column F
-              thru = row[6]?.trim()?.replace(/\*/g, ''); // Column G - Remove asterisks
-              r1 = row[7]; // Column H
-              r2 = row[8]; // Column I
-              r3 = row[9]; // Column J
-              r4 = row[10]; // Column K
+              name = row[2]?.trim(); // Column C
+              score = row[3]?.trim(); // Column D
+              today = row[4]?.trim(); // Column E
+              thru = row[5]?.trim()?.replace(/\*/g, ''); // Column F
+              r1 = row[6]; // Column G
+              r2 = row[7]; // Column H
+              r3 = row[8]; // Column I
+              r4 = row[9]; // Column J
               
               // Check if player missed cut
               isCut = rawPos?.toUpperCase() === 'CUT' || 

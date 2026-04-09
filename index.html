@@ -438,8 +438,8 @@
             let pos, name, score, today, thru, r1, r2, r3, r4, isCut;
             
             if (format === 'final') {
-              // Final format: 0=Pos, 1=seed(skip), 2=Player, 3=Score, 4=R1, 5=R2, 6=R3, 7=R4
-              const rawPos = row[0]?.trim();
+              // Final format: 0=blank, 1=Pos, 2=Player, 3=Score, 4=R1, 5=R2, 6=R3, 7=R4
+              const rawPos = row[1]?.trim();
               pos = rawPos?.replace(/[T\s"]/g, '');
               name = row[2]?.trim();
               score = row[3]?.trim();
@@ -464,8 +464,8 @@
               // Skip header rows
               if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
             } else {
-              // In-progress format: 0=Pos, 1=seed(skip), 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1, 7=R2, 8=R3, 9=R4
-              const rawPos = row[0]?.trim();
+              // In-progress format: 0=blank, 1=Pos, 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1, 7=R2, 8=R3, 9=R4
+              const rawPos = row[1]?.trim();
               pos = rawPos?.replace(/[T\s"]/g, '');
               name = row[2]?.trim();
               score = row[3]?.trim();

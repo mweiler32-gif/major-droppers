@@ -2142,6 +2142,29 @@
             🏌️ Start New Draft
           </button>
 
+          <button
+            onClick={async () => {
+              if (confirm('Push all current teams, scores, and draft state from this device to Firebase? This will overwrite what is in the database.')) {
+                await saveToFirebase({
+                  teams,
+                  scores,
+                  champion: champion || null,
+                  tournamentName,
+                  draftState: {
+                    draftMode: false,
+                    availableGolfers: availableGolfers,
+                    draftOrder: draftOrder,
+                    currentPick: draftOrder.length
+                  }
+                });
+                alert('✅ All data synced to Firebase!');
+              }
+            }}
+            className="w-full bg-blue-50 text-blue-600 font-medium py-2 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            🔄 Force Sync to Firebase
+          </button>
+
           <button 
             onClick={() => {
               if (confirm('Clear all data? This cannot be undone.')) {

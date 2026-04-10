@@ -804,14 +804,8 @@
         // Tiebreaker: lowest score in next round (R4 looks back at R3)
         const tiebreakRound = roundIndex === 3 ? 2 : roundIndex + 1;
         
-        // Only apply tiebreaker if ALL tied golfers have finished the tiebreaker round
-        const allHaveTiebreakScore = tied.every(c => {
-          const tiebreakScore = getGolferRoundScore(c.golfer, tiebreakRound);
-          return tiebreakScore !== null && tiebreakScore !== undefined;
-        });
-        
-        if (!allHaveTiebreakScore) {
-          // Tiebreaker round not complete — return null to indicate a true tie
+        // Only apply tiebreaker if the tiebreaker round is fully complete
+        if (!isRoundComplete(tiebreakRound)) {
           return { ...tied[0], tied: true, tiedWith: tied.map(c => c.golfer) };
         }
         
@@ -853,10 +847,8 @@
                               roundIndex === 2 ? 3 :
                               2;
         
-        // Only apply tiebreaker if ALL tied teams have a completed tiebreaker round
-        const allHaveTiebreakTotal = tied.every(c => getTeamRoundTotal(c.player, tiebreakRound) !== null);
-        
-        if (!allHaveTiebreakTotal) {
+        // Only apply tiebreaker if the tiebreaker round is fully complete
+        if (!isRoundComplete(tiebreakRound)) {
           return { ...tied[0], tied: true, tiedWith: tied.map(c => c.player) };
         }
         
@@ -1074,7 +1066,23 @@
         });
       };
 
-      const payouts = calculatePayouts();
+      // Check if a round is complete — all golfers in liveScores must have thru='F' for that round
+      const isRoundComplete = (roundIndex) => {
+        if (liveScores.length === 0) return false;
+        // Round is complete if all golfers have a score for that round
+        // We detect this by checking if thru='F' for all golfers (when roundIndex matches current round)
+        // OR if all golfers have a non-null score for that round (for past rounds)
+        const currentRoundIndex = tournamentRound - 1;
+        if (roundIndex < currentRoundIndex) {
+          // Past round — complete if all golfers have a score
+          return liveScores.every(g => g.rounds?.[roundIndex] !== null && g.rounds?.[roundIndex] !== undefined);
+        }
+        if (roundIndex === currentRoundIndex) {
+          // Current round — complete only if all golfers show thru='F'
+          return liveScores.every(g => g.thru === 'F');
+        }
+        return false; // Future round
+      };
       const standings = getFinalStandings();
 
       // Draft Setup View

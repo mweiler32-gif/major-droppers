@@ -464,17 +464,30 @@
               // Skip header rows
               if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
             } else {
-              // In-progress format: 0=blank, 1=Pos, 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1, 7=R2, 8=R3, 9=R4
+              // Thursday (R1): 0=blank, 1=Pos, 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1...
+              // Friday-Sunday (R2-R4): 0=blank, 1=Pos, 2=blank, 3=Player, 4=Score, 5=Today, 6=Thru, 7=R1, 8=R2, 9=R3, 10=R4
+              const isThursday = new Date().getDay() === 4;
               const rawPos = row[1]?.trim();
               pos = rawPos?.replace(/[T\s"]/g, '');
-              name = row[2]?.trim();
-              score = row[3]?.trim();
-              today = row[4]?.trim();
-              thru = row[5]?.trim()?.replace(/\*/g, '');
-              r1 = row[6];
-              r2 = row[7];
-              r3 = row[8];
-              r4 = row[9];
+              if (isThursday) {
+                name = row[2]?.trim();
+                score = row[3]?.trim();
+                today = row[4]?.trim();
+                thru = row[5]?.trim()?.replace(/\*/g, '');
+                r1 = row[6];
+                r2 = row[7];
+                r3 = row[8];
+                r4 = row[9];
+              } else {
+                name = row[3]?.trim();
+                score = row[4]?.trim();
+                today = row[5]?.trim();
+                thru = row[6]?.trim()?.replace(/\*/g, '');
+                r1 = row[7];
+                r2 = row[8];
+                r3 = row[9];
+                r4 = row[10];
+              }
               
               // Check if player missed cut
               isCut = rawPos?.toUpperCase() === 'CUT' || 

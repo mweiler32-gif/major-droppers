@@ -804,6 +804,17 @@
         // Tiebreaker: lowest score in next round (R4 looks back at R3)
         const tiebreakRound = roundIndex === 3 ? 2 : roundIndex + 1;
         
+        // Only apply tiebreaker if ALL tied golfers have finished the tiebreaker round
+        const allHaveTiebreakScore = tied.every(c => {
+          const tiebreakScore = getGolferRoundScore(c.golfer, tiebreakRound);
+          return tiebreakScore !== null && tiebreakScore !== undefined;
+        });
+        
+        if (!allHaveTiebreakScore) {
+          // Tiebreaker round not complete — return null to indicate a true tie
+          return { ...tied[0], tied: true, tiedWith: tied.map(c => c.golfer) };
+        }
+        
         let bestTiebreak = Infinity;
         let winner = tied[0];
         tied.forEach(c => {
@@ -837,10 +848,17 @@
         }
         
         // Tiebreaker round: R1→R2, R2→R1, R3→R4, R4→R3
-        const tiebreakRound = roundIndex === 0 ? 1 : // R1 looks at R2
-                              roundIndex === 1 ? 0 : // R2 looks at R1
-                              roundIndex === 2 ? 3 : // R3 looks at R4
-                              2;                     // R4 looks at R3
+        const tiebreakRound = roundIndex === 0 ? 1 :
+                              roundIndex === 1 ? 0 :
+                              roundIndex === 2 ? 3 :
+                              2;
+        
+        // Only apply tiebreaker if ALL tied teams have a completed tiebreaker round
+        const allHaveTiebreakTotal = tied.every(c => getTeamRoundTotal(c.player, tiebreakRound) !== null);
+        
+        if (!allHaveTiebreakTotal) {
+          return { ...tied[0], tied: true, tiedWith: tied.map(c => c.player) };
+        }
         
         let bestTiebreak = Infinity;
         let winner = tied[0];

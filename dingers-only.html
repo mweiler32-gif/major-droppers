@@ -764,10 +764,10 @@ async function renderYesterdaysDingers() {
           <span style="font-size:14px;font-weight:700">${d.player}</span>
           <span style="font-size:11px;color:var(--cream-dim);margin-left:8px">${d.mgr} &middot; ${d.pos}</span>
         </div>
-        <div style="font-size:20px">${hrBalls}</div>
-        <div style="text-align:center">
-          <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--brown-light);line-height:1">${d.hr}</div>
-          <div style="font-family:Barlow Condensed,sans-serif;font-size:11px;color:var(--cream-dim)">(${seasonTotal})</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:20px">${hrBalls}</div>
+          <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--brown-light)">${d.hr}</div>
+          <div style="font-family:Bebas Neue,sans-serif;font-size:20px;color:var(--cream-dim)">(${seasonTotal})</div>
         </div>
       </div>`;
     }).join('');

@@ -262,8 +262,17 @@ function todayStr() {
   return `${y}-${m}-${d}`;
 }
 function dateStr(daysAgo) {
-  const d = new Date(); d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
+  // Use same 2am baseball day rollover as todayStr()
+  const now = new Date();
+  const base = new Date(now);
+  if (now.getHours() < 2) {
+    base.setDate(base.getDate() - 1); // before 2am = still yesterday's baseball day
+  }
+  base.setDate(base.getDate() - daysAgo);
+  const y = base.getFullYear();
+  const m = String(base.getMonth()+1).padStart(2,'0');
+  const d = String(base.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
 }
 
 // ── ROSTERS ───────────────────────────────────────────────
@@ -316,7 +325,7 @@ const PLAYER_IDS = {
   // All IDs verified from baseballsavant.mlb.com URLs
   'CAL RALEIGH': 663728,
   'NICK KURTZ': 701762,
-  'JAZZ CHISHOLM JR.': 665750,
+  'JAZZ CHISHOLM JR.': 665862,
   'JOSE RAMIREZ': 608070,
   'COLSON MONTGOMERY': 695657,
   'RILEY GREENE': 682985,
@@ -749,13 +758,17 @@ async function renderYesterdaysDingers() {
 
     el.innerHTML = dingers.map(d => {
       const hrBalls = String.fromCodePoint(0x1F4A5).repeat(Math.min(d.hr, 4));
+      const seasonTotal = getHR(d.player) ?? d.hr;
       return `<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:Barlow Condensed,sans-serif;">
         <div>
           <span style="font-size:14px;font-weight:700">${d.player}</span>
           <span style="font-size:11px;color:var(--cream-dim);margin-left:8px">${d.mgr} &middot; ${d.pos}</span>
         </div>
         <div style="font-size:20px">${hrBalls}</div>
-        <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--brown-light)">${d.hr}</div>
+        <div style="text-align:center">
+          <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--brown-light);line-height:1">${d.hr}</div>
+          <div style="font-family:Barlow Condensed,sans-serif;font-size:11px;color:var(--cream-dim)">(${seasonTotal})</div>
+        </div>
       </div>`;
     }).join('');
   } catch(e) {

@@ -191,7 +191,7 @@
   <div id="panel-standings" class="panel active">
     <div class="refresh-row">
       <span class="upd-txt" id="upd-txt">Not yet refreshed</span>
-      <button class="refresh-btn" onclick="loadLive()">⟳ Refresh</button>
+      <button class="refresh-btn" onclick="loadLive(true);loadTodayGames(true).then(()=>{renderTodaysDingers();renderYesterdaysDingers();})">⟳ Refresh</button>
     </div>
     <div class="sec-hd">Standings</div>
     <div id="standings-wrap"><div class="loading-pulse">LOADING...</div></div>
@@ -471,7 +471,6 @@ async function loadTodayGames(force = false) {
   const now = Date.now();
   // Skip if recently fetched and not forced and no live games running
   if (!force && (now - lastGamesFetch) < GAMES_CACHE_MS && !rosterAutoRefresh) {
-    renderRoster(); renderTodaysDingers(); renderYesterdaysDingers();
     return;
   }
   try {
@@ -535,7 +534,7 @@ async function loadTodayGames(force = false) {
       if (homeId) todayGames['__team__'+homeId] = { ...gameInfo, isUpcoming, hr: null, ab: null, h: null };
 
       const bs = boxMap[g.gamePk];
-      if (bs && isLive) {
+      if (bs && (isLive || isFinal)) {
         ['away','home'].forEach(side => {
           const batters = bs?.teams?.[side]?.batters || [];
           const playerMap = bs?.teams?.[side]?.players || {};
@@ -758,7 +757,11 @@ async function renderYesterdaysDingers() {
 
     el.innerHTML = dingers.map(d => {
       const hrBalls = String.fromCodePoint(0x1F4A5).repeat(Math.min(d.hr, 4));
-      const seasonTotal = getHR(d.player) ?? d.hr;
+      // Season total as of yesterday = current total minus any HRs hit today
+      const currentTotal = getHR(d.player) ?? d.hr;
+      const todayGi = getPlayerGameInfo(d.player);
+      const todayHRs = (todayGi && !todayGi.isUpcoming && todayGi.hr > 0) ? todayGi.hr : 0;
+      const seasonTotal = Math.max(d.hr, currentTotal - todayHRs);
       return `<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:Barlow Condensed,sans-serif;">
         <div>
           <span style="font-size:14px;font-weight:700">${d.player}</span>
@@ -869,14 +872,18 @@ function renderTodaysDingers() {
     const homeShort = d.home.split(' ').slice(-1)[0];
     const gameCtx = `${awayShort} @ ${homeShort}${d.isFinal ? ' (F)' : d.isLive ? ' (Live)' : ''}`;
     const hrBalls = '💥'.repeat(Math.min(d.hr, 4));
+    const seasonTotal = getHR(d.player) ?? d.hr;
     return `<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:14px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:Barlow Condensed,sans-serif;">
       <div>
         <span style="font-size:14px;font-weight:700">${d.player}</span>
-        <span style="font-size:11px;color:var(--cream-dim);margin-left:8px">${d.mgr} · ${d.pos}</span>
+        <span style="font-size:11px;color:var(--cream-dim);margin-left:8px">${d.mgr} &middot; ${d.pos}</span>
         <div style="font-size:11px;color:var(--cream-dim);margin-top:1px">${gameCtx}</div>
       </div>
-      <div style="font-size:20px">${hrBalls}</div>
-      <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--red)">${d.hr}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:20px">${hrBalls}</div>
+        <div style="font-family:Bebas Neue,sans-serif;font-size:28px;color:var(--red)">${d.hr}</div>
+        <div style="font-family:Bebas Neue,sans-serif;font-size:20px;color:var(--brown-light)">(${seasonTotal})</div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1092,6 +1099,23 @@ function showPanel(name, btn) {
 }
 
 // ── INIT ──────────────────────────────────────────────────
+// Clear stale caches if it's a new baseball day
+(function clearStaleCaches() {
+  const today = todayStr();
+  try {
+    const hrCache = JSON.parse(localStorage.getItem(HR_CACHE_KEY) || 'null');
+    if (hrCache && hrCache.date !== today) {
+      localStorage.removeItem(HR_CACHE_KEY);
+    }
+  } catch(e) {}
+  try {
+    const todayStats = JSON.parse(localStorage.getItem(TODAY_STATS_KEY) || 'null');
+    if (todayStats && todayStats.date !== today) {
+      localStorage.removeItem(TODAY_STATS_KEY);
+    }
+  } catch(e) {}
+})();
+
 renderStandings();
 loadLive();
 // Restore persisted today stats immediately (shows last known stats before fresh fetch)

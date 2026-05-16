@@ -871,10 +871,21 @@
             .map(g => getGolferScoreFromScores(scores, g)?.position)
             .filter(p => p !== null && p !== undefined)
             .sort((a, b) => a - b);
+          // Count survivors (players who made the cut = have a position)
+          const survivors = golfers.filter(g => {
+            const data = getGolferScoreFromScores(scores, g);
+            return data?.position !== null && data?.position !== undefined && !data?.cut;
+          }).length;
+          const eligible = survivors >= 5; // Must have 5+ survivors to qualify for overall
           const best5 = positions.slice(0, Math.min(5, positions.length));
           const total = best5.reduce((sum, p) => sum + p, 0);
-          return { player, total, positions: best5 };
-        }).sort((a, b) => a.total - b.total);
+          return { player, total, positions: best5, survivors, eligible };
+        }).sort((a, b) => {
+          // Ineligible teams go to bottom
+          if (a.eligible && !b.eligible) return -1;
+          if (!a.eligible && b.eligible) return 1;
+          return a.total - b.total;
+        });
         return standings;
       };
 
@@ -903,8 +914,9 @@
           }
           
           const standings = getFinalStandings();
-          if (standings[0] && standings[0].total > 0) {
-            payouts[standings[0].player] += 150;
+          const eligibleStandings = standings.filter(s => s.eligible);
+          if (eligibleStandings[0] && eligibleStandings[0].total > 0) {
+            payouts[eligibleStandings[0].player] += 150;
           }
         }
         
@@ -1459,13 +1471,16 @@
               </div>
               <div className="divide-y divide-gray-100">
                 {standings.map((s, i) => (
-                  <div key={s.player} className={`flex items-center justify-between px-4 py-3 ${i === 0 ? 'bg-amber-50' : ''}`}>
+                  <div key={s.player} className={`flex items-center justify-between px-4 py-3 ${i === 0 && s.eligible ? 'bg-amber-50' : s.eligible ? '' : 'bg-red-50'}`}>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-500 w-4">{i + 1}.</span>
-                      <span className="font-semibold text-gray-800">{s.player}</span>
+                      <span className="text-sm text-gray-500 w-4">{s.eligible ? `${i + 1}.` : '—'}</span>
+                      <span className={`font-semibold ${s.eligible ? 'text-gray-800' : 'text-gray-400'}`}>{s.player}</span>
+                      {!s.eligible && (
+                        <span className="text-xs bg-red-100 text-red-600 font-medium px-1.5 py-0.5 rounded">DQ ({s.survivors} left)</span>
+                      )}
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-gray-800">{s.total || '—'}</div>
+                      <div className={`font-bold ${s.eligible ? 'text-gray-800' : 'text-gray-400'}`}>{s.total || '—'}</div>
                       <div className="text-xs text-gray-500">pos total</div>
                     </div>
                   </div>
@@ -1548,7 +1563,7 @@
                           🏆 Champion Bonus ($30): {champion ? `${champion} → ${players.find(p => (teams[p] || []).some(g => namesMatch(g, champion))) || '—'}` : 'TBD'}
                         </div>
                         <div className="text-sm mt-1">
-                          🥇 Overall Winner ($150): {standings[0]?.player || 'TBD'}
+                          🥇 Overall Winner ($150): {standings.find(s => s.eligible)?.player || 'TBD'}
                         </div>
                       </div>
                     )}

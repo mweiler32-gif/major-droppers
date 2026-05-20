@@ -547,13 +547,12 @@
             setScores(newScores);
             saveToFirebase({ scores: newScores });
             
-            // Auto-select champion if tournament is complete (final format)
-            // Find the golfer in position 1 who is on a team
-            if (format === 'final' && !champion) {
+            // Auto-set champion when tournament is complete (final format only)
+            if (format === 'final') {
               const winner = parsed.find(p => p.position === 1);
               if (winner) {
                 const winnerOnTeam = allGolfers.find(g => namesMatch(g, winner.name));
-                if (winnerOnTeam) {
+                if (winnerOnTeam && winnerOnTeam !== champion) {
                   setChampion(winnerOnTeam);
                   saveToFirebase({ champion: winnerOnTeam });
                 }
@@ -2146,24 +2145,39 @@
           
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="font-bold text-gray-800 mb-3">Champion</h3>
-            <select
-              value={champion || ''}
-              onChange={(e) => {
-                const val = e.target.value || null;
-                setChampion(val);
-                saveToFirebase({ champion: val });
-              }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="">Select tournament winner...</option>
-              {Object.values(teams).flat().sort().map(golfer => (
-                <option key={golfer} value={golfer}>{golfer}</option>
-              ))}
-            </select>
-            {champion && (
-              <p className="text-sm text-emerald-600 mt-2">
-                🏆 {champion} — Owner: {players.find(p => (teams[p] || []).some(g => namesMatch(g, champion)))}
-              </p>
+            {champion ? (
+              <div>
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  <span className="text-emerald-800 font-semibold">🏆 {champion}</span>
+                  <span className="text-sm text-emerald-600">
+                    Owner: {players.find(p => (teams[p] || []).some(g => namesMatch(g, champion))) || '—'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Auto-detected from leaderboard position 1</p>
+                <button
+                  onClick={() => { setChampion(null); saveToFirebase({ champion: null }); }}
+                  className="mt-2 text-xs text-red-400 hover:text-red-600 underline"
+                >
+                  Clear (manual override)
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-gray-400 mb-2">Auto-detects from leaderboard when scores are fetched.</p>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value || null;
+                    if (val) { setChampion(val); saveToFirebase({ champion: val }); }
+                  }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 text-sm"
+                >
+                  <option value="">Manual override...</option>
+                  {Object.values(teams).flat().sort().map(golfer => (
+                    <option key={golfer} value={golfer}>{golfer}</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
 

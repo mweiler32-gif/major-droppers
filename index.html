@@ -2074,9 +2074,19 @@
             return obj;
           };
 
-          // Use already-computed payouts and standings from render (these are what the app is displaying)
-          const finalStandings = standings || [];
-          const finalPayouts = payouts || {};
+          // Compute standings and payouts fresh at save time
+          const finalStandings = getFinalStandings();
+          const completedRounds = ROUNDS.map((_, i) => {
+            if (liveScores.length === 0) return false;
+            const relevantGolfers = i >= 2 ? liveScores.filter(g => !g.cut) : liveScores;
+            if (relevantGolfers.length === 0) return false;
+            const withScores = relevantGolfers.filter(g => {
+              const s = g.rounds?.[i];
+              return s !== null && s !== undefined;
+            }).length;
+            return withScores / relevantGolfers.length >= 0.95;
+          });
+          const finalPayouts = calculatePayouts(completedRounds);
 
           // Build daily winners
           let dailyWinners = [];

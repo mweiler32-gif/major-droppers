@@ -550,12 +550,9 @@
             // Auto-set champion when tournament is complete (final format only)
             if (format === 'final') {
               const winner = parsed.find(p => p.position === 1);
-              if (winner) {
-                const winnerOnTeam = allGolfers.find(g => namesMatch(g, winner.name));
-                if (winnerOnTeam && winnerOnTeam !== champion) {
-                  setChampion(winnerOnTeam);
-                  saveToFirebase({ champion: winnerOnTeam });
-                }
+              if (winner && winner.name !== champion) {
+                setChampion(winner.name);
+                saveToFirebase({ champion: winner.name });
               }
             }
           }

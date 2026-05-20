@@ -825,6 +825,15 @@
         // Collect all teams with their totals
         const candidates = [];
         players.forEach(player => {
+          // For R3 & R4, team must have 5+ survivors (made the cut) to be eligible
+          if (roundIndex >= 2) {
+            const golfers = teams[player] || [];
+            const survivors = golfers.filter(g => {
+              const data = getGolferScoreFromScores(scores, g);
+              return data?.position !== null && data?.position !== undefined && !data?.cut;
+            }).length;
+            if (survivors < 5) return;
+          }
           const total = getTeamRoundTotal(player, roundIndex);
           if (total !== null) {
             candidates.push({ player, total });

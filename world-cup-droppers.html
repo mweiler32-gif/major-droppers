@@ -62,9 +62,9 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
 .match-meta{font-size:10px;color:var(--muted);margin-top:2px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
 .mgr-tag{font-size:9px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:2px;display:inline-block;margin-top:2px}
-.mgr-SIEVE{background:#4a1942;color:#e879f9}.mgr-CRAIG{background:#1a3a4a;color:#38bdf8}
-.mgr-WEILER{background:#1a3a1a;color:#4ade80}.mgr-PALMER{background:#3a2a1a;color:#fb923c}
-.mgr-ROBERTS{background:#3a1a1a;color:#f87171}
+.mgr-SIEVE{background:#3a2e0a;color:#C8A44A}.mgr-CRAIG{background:#0d2035;color:#4A7FB5}
+.mgr-WEILER{background:#0d2318;color:#4A8C5C}.mgr-PALMER{background:#2e1a08;color:#C46A2E}
+.mgr-ROBERTS{background:#2e0d0d;color:#B54A4A}
 .status-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px;text-transform:uppercase}
 .status-badge.live{background:var(--red);color:white}
 .status-badge.ft{background:var(--border);color:var(--muted)}
@@ -104,7 +104,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div class="logo-ball">⚽</div>
       <div>
         <div class="logo-text">World Cup Droppers</div>
-        <div class="logo-sub">USA · Canada · Mexico · 2026</div>
+        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v1.6</span></div>
       </div>
     </div>
     <nav>
@@ -141,11 +141,11 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
     <div class="section-title">Group Stage Schedule</div>
     <div class="filter-tabs">
       <button class="filter-tab active" onclick="filterGroup('ALL',this)">ALL</button>
-      <button class="filter-tab mgr-tab" onclick="filterGroup('SIEVE',this)" style="color:#e879f9;border-color:#4a1942">SIEVE</button>
-      <button class="filter-tab mgr-tab" onclick="filterGroup('CRAIG',this)" style="color:#38bdf8;border-color:#1a3a4a">CRAIG</button>
-      <button class="filter-tab mgr-tab" onclick="filterGroup('WEILER',this)" style="color:#4ade80;border-color:#1a3a1a">WEILER</button>
-      <button class="filter-tab mgr-tab" onclick="filterGroup('PALMER',this)" style="color:#fb923c;border-color:#3a2a1a">PALMER</button>
-      <button class="filter-tab mgr-tab" onclick="filterGroup('ROBERTS',this)" style="color:#f87171;border-color:#3a1a1a">ROBERTS</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('SIEVE',this)" style="color:#C8A44A;border-color:#3a2e0a">SIEVE</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('CRAIG',this)" style="color:#4A7FB5;border-color:#0d2035">CRAIG</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('WEILER',this)" style="color:#4A8C5C;border-color:#0d2318">WEILER</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('PALMER',this)" style="color:#C46A2E;border-color:#2e1a08">PALMER</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('ROBERTS',this)" style="color:#B54A4A;border-color:#2e0d0d">ROBERTS</button>
     </div>
     <div id="matches-content"></div>
   </div>
@@ -170,7 +170,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
 
 <script>
 const MANAGERS=['SIEVE','CRAIG','WEILER','PALMER','ROBERTS'];
-const MANAGER_COLORS={SIEVE:'#e879f9',CRAIG:'#38bdf8',WEILER:'#4ade80',PALMER:'#fb923c',ROBERTS:'#f87171'};
+const MANAGER_COLORS={SIEVE:'#C8A44A',CRAIG:'#4A7FB5',WEILER:'#4A8C5C',PALMER:'#C46A2E',ROBERTS:'#B54A4A'};
 const DRAFT={
   SIEVE:  ['Spain','Mexico','Switzerland','Türkiye','Ecuador','Australia','Algeria','DR Congo','Saudi Arabia'],
   CRAIG:  ['France','Netherlands','Canada','South Korea','Iran','Scotland','Uzbekistan','South Africa','Colombia'],
@@ -336,30 +336,29 @@ function buildStats(){
     stats[mgr]={w:0,d:0,l:0,gf:0,pts:0,teams:{}};
     for(const t of DRAFT[mgr])stats[mgr].teams[t]={w:0,d:0,l:0,gf:0,pts:0,status:'upcoming'};
   }
-  for(const m of SCHEDULE){
-    const live=getLive(m.home,m.away);
-    if(!live||live.hs===null||live.as===null)continue;
-    const st=(live.status||'').toUpperCase();
-    const isLive=['IN_PROGRESS','HALFTIME','END_PERIOD'].some(s=>st.includes(s));
-    const isFT=st.includes('FINAL');
-    if(!isLive&&!isFT)continue;
-    // live stores home/away from ESPN's perspective
-    const espnHomeIsOurHome=live.home===m.home.toLowerCase();
-    const hg=espnHomeIsOurHome?live.hs:live.as;
-    const ag=espnHomeIsOurHome?live.as:live.hs;
-    for(const[team,goals,opp]of[[m.home,hg,ag],[m.away,ag,hg]]){
-      const mgr=getMgr(team);
+  for(const group of groupStandings){
+    const entries=group.standings?.entries||group.entries||[];
+    for(const entry of entries){
+      const teamName=entry.team?.displayName||entry.team?.name||'';
+      const mgr=getMgr(teamName);
       if(!mgr)continue;
       const key=Object.keys(stats[mgr].teams).find(k=>
-        k.toLowerCase()===team.toLowerCase()||
-        (ALIASES[team.toLowerCase()]&&ALIASES[team.toLowerCase()]===k.toLowerCase())
+        k.toLowerCase()===teamName.toLowerCase()||
+        (ALIASES[teamName.toLowerCase()]&&ALIASES[teamName.toLowerCase()]===k.toLowerCase())||
+        (ALIASES[k.toLowerCase()]&&ALIASES[k.toLowerCase()]===teamName.toLowerCase())
       );
       if(!key)continue;
+      const s={};
+      (entry.stats||[]).forEach(stat=>{ s[stat.name||stat.abbreviation]=stat.value; });
+      const w=parseInt(s.wins||s.w||0);
+      const d=parseInt(s.draws||s.d||0);
+      const l=parseInt(s.losses||s.l||0);
+      const gf=parseInt(s.pointsFor||s.gf||s.goalsScored||0);
+      const played=w+d+l;
       const t=stats[mgr].teams[key];
-      t.gf+=goals;
-      if(isFT){if(goals>opp)t.w++;else if(goals===opp)t.d++;else t.l++;}
-      t.status=isLive?'playing':'active';
-      t.pts=(t.w*3)+(t.d*1)+(t.gf*0.5);
+      t.w=w; t.d=d; t.l=l; t.gf=gf;
+      t.status=played>0?'active':'upcoming';
+      t.pts=(w*3)+(d*1)+(gf*0.5);
     }
   }
   for(const mgr of MANAGERS){
@@ -486,7 +485,7 @@ function renderMatches(){
       const clock=comp.status?.displayClock||'';
       const hs=state==='pre'?null:parseInt(homeC.score)||0;
       const as_=state==='pre'?null:parseInt(awayC.score)||0;
-      const dateStr=e.date?.substring(0,10)||'';
+      const dateStr=new Date(e.date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
       const detail=comp.status?.type?.detail||'';
       // Get local kickoff time from detail (e.g. "Thu, June 11th at 3:00 PM EDT")
       const timeMatch=detail.match(/at (.+)$/);
@@ -563,11 +562,13 @@ function renderMatches(){
 
 async function loadData(){
   document.getElementById('last-updated').textContent='Refreshing...';
-  await fetchLiveScores();
-  fetchGroupStandings().then(()=>renderGroups()); // non-blocking, groups tab loads independently
+  // Standings drives scoring — await it
+  await fetchGroupStandings();
   const stats=buildStats();
   renderStandings(stats);
-  renderMatches();
+  renderGroups();
+  // Scoreboard drives matches display only — non-blocking
+  fetchLiveScores().then(()=>renderMatches());
   document.getElementById('last-updated').textContent=`Last updated: ${new Date().toLocaleTimeString()}`;
 }
 

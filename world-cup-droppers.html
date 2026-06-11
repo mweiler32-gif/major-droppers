@@ -172,11 +172,11 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
 const MANAGERS=['SIEVE','CRAIG','WEILER','PALMER','ROBERTS'];
 const MANAGER_COLORS={SIEVE:'#e879f9',CRAIG:'#38bdf8',WEILER:'#4ade80',PALMER:'#fb923c',ROBERTS:'#f87171'};
 const DRAFT={
-  SIEVE:  ['Spain','Mexico','Switzerland','Turkey','Ecuador','Australia','Algeria','DR Congo','Saudi Arabia'],
+  SIEVE:  ['Spain','Mexico','Switzerland','Türkiye','Ecuador','Australia','Algeria','DR Congo','Saudi Arabia'],
   CRAIG:  ['France','Netherlands','Canada','South Korea','Iran','Scotland','Uzbekistan','South Africa','Colombia'],
-  WEILER: ['England','Germany','Morocco','Senegal','Norway','Ivory Coast','Ghana','Jordan','Panama'],
-  PALMER: ['Brazil','Belgium','USA','Japan','Egypt','Czech Republic','Bosnia-Herzegovina','Tunisia','Qatar'],
-  ROBERTS:['Portugal','Argentina','Uruguay','Croatia','Austria','Paraguay','Sweden','New Zealand','Cabo Verde']
+  WEILER: ['England','Germany','Morocco','Senegal','Norway',"Côte d'Ivoire",'Ghana','Jordan','Panama'],
+  PALMER: ['Brazil','Belgium','United States','Japan','Egypt','Czechia','Bosnia-Herzegovina','Tunisia','Qatar'],
+  ROBERTS:['Portugal','Argentina','Uruguay','Croatia','Austria','Paraguay','Sweden','New Zealand','Cape Verde']
 };
 
 const SCHEDULE=[
@@ -198,18 +198,18 @@ const SCHEDULE=[
   {group:'C',date:'2026-06-18',time:'6:00 PM ET',home:'Morocco',away:'Haiti',venue:'Hard Rock Stadium, Miami',hs:null,as:null},
   {group:'C',date:'2026-06-23',time:'6:00 PM ET',home:'Brazil',away:'Haiti',venue:'NRG Stadium, Houston',hs:null,as:null},
   {group:'C',date:'2026-06-23',time:'6:00 PM ET',home:'Morocco',away:'Scotland',venue:'SoFi Stadium, Los Angeles',hs:null,as:null},
-  {group:'D',date:'2026-06-12',time:'9:00 PM ET',home:'USA',away:'Paraguay',venue:'SoFi Stadium, Los Angeles',hs:null,as:null},
-  {group:'D',date:'2026-06-13',time:'9:00 PM ET',home:'Australia',away:'Turkey',venue:'Lumen Field, Seattle',hs:null,as:null},
-  {group:'D',date:'2026-06-18',time:'9:00 PM ET',home:'USA',away:'Australia',venue:"Levi's Stadium, San Jose",hs:null,as:null},
-  {group:'D',date:'2026-06-19',time:'12:00 PM ET',home:'Turkey',away:'Paraguay',venue:'Arrowhead Stadium, Kansas City',hs:null,as:null},
-  {group:'D',date:'2026-06-24',time:'6:00 PM ET',home:'USA',away:'Turkey',venue:'AT&T Stadium, Dallas',hs:null,as:null},
+  {group:'D',date:'2026-06-12',time:'9:00 PM ET',home:'United States',away:'Paraguay',venue:'SoFi Stadium, Los Angeles',hs:null,as:null},
+  {group:'D',date:'2026-06-13',time:'9:00 PM ET',home:'Australia',away:'Türkiye',venue:'Lumen Field, Seattle',hs:null,as:null},
+  {group:'D',date:'2026-06-18',time:'9:00 PM ET',home:'United States',away:'Australia',venue:"Levi's Stadium, San Jose",hs:null,as:null},
+  {group:'D',date:'2026-06-19',time:'12:00 PM ET',home:'Türkiye',away:'Paraguay',venue:'Arrowhead Stadium, Kansas City',hs:null,as:null},
+  {group:'D',date:'2026-06-24',time:'6:00 PM ET',home:'United States',away:'Türkiye',venue:'AT&T Stadium, Dallas',hs:null,as:null},
   {group:'D',date:'2026-06-24',time:'6:00 PM ET',home:'Australia',away:'Paraguay',venue:'Lumen Field, Seattle',hs:null,as:null},
-  {group:'E',date:'2026-06-14',time:'1:00 PM ET',home:'Germany',away:'Curazao',venue:'NRG Stadium, Houston',hs:null,as:null},
-  {group:'E',date:'2026-06-14',time:'7:00 PM ET',home:'Ivory Coast',away:'Ecuador',venue:'Lincoln Financial Field, Philadelphia',hs:null,as:null},
-  {group:'E',date:'2026-06-19',time:'3:00 PM ET',home:'Germany',away:'Ivory Coast',venue:'AT&T Stadium, Dallas',hs:null,as:null},
-  {group:'E',date:'2026-06-19',time:'6:00 PM ET',home:'Ecuador',away:'Curazao',venue:'Arrowhead Stadium, Kansas City',hs:null,as:null},
+  {group:'E',date:'2026-06-14',time:'1:00 PM ET',home:'Germany',away:'Curaçao',venue:'NRG Stadium, Houston',hs:null,as:null},
+  {group:'E',date:'2026-06-14',time:'7:00 PM ET',home:"Côte d'Ivoire",away:'Ecuador',venue:'Lincoln Financial Field, Philadelphia',hs:null,as:null},
+  {group:'E',date:'2026-06-19',time:'3:00 PM ET',home:'Germany',away:"Côte d'Ivoire",venue:'AT&T Stadium, Dallas',hs:null,as:null},
+  {group:'E',date:'2026-06-19',time:'6:00 PM ET',home:'Ecuador',away:'Curaçao',venue:'Arrowhead Stadium, Kansas City',hs:null,as:null},
   {group:'E',date:'2026-06-24',time:'3:00 PM ET',home:'Germany',away:'Ecuador',venue:'Mercedes-Benz Stadium, Atlanta',hs:null,as:null},
-  {group:'E',date:'2026-06-24',time:'3:00 PM ET',home:'Ivory Coast',away:'Curazao',venue:'Gillette Stadium, Boston',hs:null,as:null},
+  {group:'E',date:'2026-06-24',time:'3:00 PM ET',home:"Côte d'Ivoire",away:'Curaçao',venue:'Gillette Stadium, Boston',hs:null,as:null},
   {group:'F',date:'2026-06-14',time:'4:00 PM ET',home:'Netherlands',away:'Japan',venue:'AT&T Stadium, Dallas',hs:null,as:null},
   {group:'F',date:'2026-06-14',time:'10:00 PM ET',home:'Sweden',away:'Tunisia',venue:'Estadio BBVA, Monterrey',hs:null,as:null},
   {group:'F',date:'2026-06-19',time:'9:00 PM ET',home:'Netherlands',away:'Tunisia',venue:'SoFi Stadium, Los Angeles',hs:null,as:null},
@@ -222,12 +222,12 @@ const SCHEDULE=[
   {group:'G',date:'2026-06-20',time:'6:00 PM ET',home:'Iran',away:'Egypt',venue:'Hard Rock Stadium, Miami',hs:null,as:null},
   {group:'G',date:'2026-06-25',time:'6:00 PM ET',home:'Belgium',away:'Iran',venue:'SoFi Stadium, Los Angeles',hs:null,as:null},
   {group:'G',date:'2026-06-25',time:'6:00 PM ET',home:'Egypt',away:'New Zealand',venue:'MetLife Stadium, New York',hs:null,as:null},
-  {group:'H',date:'2026-06-15',time:'1:00 PM ET',home:'Spain',away:'Cabo Verde',venue:'Mercedes-Benz Stadium, Atlanta',hs:null,as:null},
+  {group:'H',date:'2026-06-15',time:'1:00 PM ET',home:'Spain',away:'Cape Verde',venue:'Mercedes-Benz Stadium, Atlanta',hs:null,as:null},
   {group:'H',date:'2026-06-16',time:'12:00 PM ET',home:'Uruguay',away:'Saudi Arabia',venue:'Hard Rock Stadium, Miami',hs:null,as:null},
   {group:'H',date:'2026-06-20',time:'9:00 PM ET',home:'Spain',away:'Saudi Arabia',venue:'Mercedes-Benz Stadium, Atlanta',hs:null,as:null},
-  {group:'H',date:'2026-06-21',time:'3:00 PM ET',home:'Uruguay',away:'Cabo Verde',venue:'NRG Stadium, Houston',hs:null,as:null},
+  {group:'H',date:'2026-06-21',time:'3:00 PM ET',home:'Uruguay',away:'Cape Verde',venue:'NRG Stadium, Houston',hs:null,as:null},
   {group:'H',date:'2026-06-26',time:'3:00 PM ET',home:'Spain',away:'Uruguay',venue:'Akron Stadium, Guadalajara',hs:null,as:null},
-  {group:'H',date:'2026-06-26',time:'3:00 PM ET',home:'Saudi Arabia',away:'Cabo Verde',venue:'AT&T Stadium, Dallas',hs:null,as:null},
+  {group:'H',date:'2026-06-26',time:'3:00 PM ET',home:'Saudi Arabia',away:'Cape Verde',venue:'AT&T Stadium, Dallas',hs:null,as:null},
   {group:'I',date:'2026-06-16',time:'3:00 PM ET',home:'France',away:'Senegal',venue:'MetLife Stadium, New York',hs:null,as:null},
   {group:'I',date:'2026-06-16',time:'9:00 PM ET',home:'Norway',away:'Iraq',venue:'Arrowhead Stadium, Kansas City',hs:null,as:null},
   {group:'I',date:'2026-06-21',time:'6:00 PM ET',home:'France',away:'Iraq',venue:'Lincoln Financial Field, Philadelphia',hs:null,as:null},
@@ -255,7 +255,36 @@ const SCHEDULE=[
 ];
 
 // Team name aliases for matching
-const ALIASES={'czechia':'czech republic','dr congo':'dr congo','congo dr':'dr congo','democratic republic of congo':'dr congo',"côte d'ivoire":'ivory coast',"cote d'ivoire":'ivory coast','curazao':'curazao','curaçao':'curazao','cabo verde':'cabo verde','cape verde':'cabo verde','ir iran':'iran','korea republic':'south korea','republic of korea':'south korea','united states':'usa','bosnia-herzegovina':'bosnia-herzegovina','bosnia and herzegovina':'bosnia-herzegovina','saudi arabia':'saudi arabia','south africa':'south africa','new zealand':'new zealand'};
+const ALIASES={
+  // Turkey
+  'turkey':'türkiye',
+  // Ivory Coast
+  'ivory coast':"côte d'ivoire",
+  "cote d'ivoire":"côte d'ivoire",
+  // USA
+  'usa':'united states',
+  'united states of america':'united states',
+  // Czech Republic
+  'czech republic':'czechia',
+  // Cabo Verde
+  'cabo verde':'cape verde',
+  // Curacao
+  'curazao':'curaçao',
+  'curacao':'curaçao',
+  // DR Congo
+  'dr congo':'dr congo',
+  'congo dr':'dr congo',
+  'democratic republic of congo':'dr congo',
+  // Iran
+  'ir iran':'iran',
+  // South Korea
+  'korea republic':'south korea',
+  'republic of korea':'south korea',
+  // Bosnia
+  'bosnia and herzegovina':'bosnia-herzegovina',
+  // Curaçao in schedule
+  'curaçao':'curaçao'
+};
 
 // Build reverse lookup: normalized team name -> manager
 const TEAM_MGR={};
@@ -273,14 +302,30 @@ let espnEvents=[];
 
 async function fetchLiveScores(){
   try{
-    // Fetch full group stage date range in one call
-    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627',{signal:AbortSignal.timeout(8000)});
-    if(!r.ok)return;
-    const data=await r.json();
-    const events=data.events||[];
-    espnEvents=events;
+    // Fetch today's live scores (no date param = current/live games)
+    const [r1, r2] = await Promise.all([
+      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=20',{signal:AbortSignal.timeout(8000)}),
+      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627',{signal:AbortSignal.timeout(8000)})
+    ]);
+
+    const allEvents=[];
+    if(r2.ok){ const d=await r2.json(); (d.events||[]).forEach(e=>allEvents.push({e,live:false})); }
+    if(r1.ok){ const d=await r1.json(); (d.events||[]).forEach(e=>allEvents.push({e,live:true})); }
+
+    // Build espnEvents from range (full schedule), override scores with live data
+    const eventMap={};
+    // First pass: full schedule
+    for(const {e} of allEvents.filter(x=>!x.live)){
+      eventMap[e.id]=e;
+    }
+    // Second pass: overlay live events (overwrite score/status)
+    for(const {e} of allEvents.filter(x=>x.live)){
+      eventMap[e.id]=e;
+    }
+    espnEvents=Object.values(eventMap);
+
     liveScores={};
-    for(const e of events){
+    for(const e of espnEvents){
       const comp=e.competitions?.[0];
       if(!comp)continue;
       const home=comp.competitors?.find(c=>c.homeAway==='home');
@@ -292,7 +337,7 @@ async function fetchLiveScores(){
       const state=comp.status?.type?.state||'';
       const hs=state==='pre'?null:parseInt(home.score)||0;
       const as_=state==='pre'?null:parseInt(away.score)||0;
-      liveScores[`${homeName}|${awayName}`]={hs:hs===null?null:hs,as:as_===null?null:as_,status:status};
+      liveScores[`${homeName}|${awayName}`]={hs,as:as_,status};
     }
   }catch(e){console.warn('ESPN API error:',e);}
 }

@@ -74,6 +74,18 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
 .filter-tab:hover{border-color:var(--blue);color:var(--text)}
 .filter-tab.active{background:var(--blue);border-color:var(--blue);color:white}
 .bracket-notice{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:40px;text-align:center;color:var(--muted)}
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.group-standing-block{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.group-standing-header{background:var(--blue);padding:8px 14px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px}
+.group-standing-table{width:100%;border-collapse:collapse;font-size:12px}
+.group-standing-table th{padding:6px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;text-align:center}
+.group-standing-table th:first-child{text-align:left}
+.group-standing-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-family:'Roboto Mono',monospace;font-size:12px}
+.group-standing-table td:first-child{text-align:left;font-family:'Inter',sans-serif;font-weight:600;font-size:12px}
+.group-standing-table tr:last-child td{border-bottom:none}
+.group-standing-table tr.advancing td{background:rgba(0,168,80,0.08)}
+.group-standing-table tr.advancing td:first-child{border-left:3px solid var(--green)}
+.pts-bold{font-weight:700;color:var(--green)}
 .bracket-notice .icon{font-size:48px;margin-bottom:16px}
 .bracket-notice h3{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;margin-bottom:8px;color:var(--text)}
 .loading{text-align:center;padding:60px 20px;color:var(--muted)}
@@ -98,6 +110,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
     <nav>
       <button class="active" onclick="showView('standings',this)">Standings</button>
       <button onclick="showView('matches',this)">Matches</button>
+      <button onclick="showView('groups',this)">Groups</button>
       <button onclick="showView('bracket',this)">Bracket</button>
     </nav>
   </div>
@@ -128,18 +141,6 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
     <div class="section-title">Group Stage Schedule</div>
     <div class="filter-tabs">
       <button class="filter-tab active" onclick="filterGroup('ALL',this)">ALL</button>
-      <button class="filter-tab" onclick="filterGroup('A',this)">A</button>
-      <button class="filter-tab" onclick="filterGroup('B',this)">B</button>
-      <button class="filter-tab" onclick="filterGroup('C',this)">C</button>
-      <button class="filter-tab" onclick="filterGroup('D',this)">D</button>
-      <button class="filter-tab" onclick="filterGroup('E',this)">E</button>
-      <button class="filter-tab" onclick="filterGroup('F',this)">F</button>
-      <button class="filter-tab" onclick="filterGroup('G',this)">G</button>
-      <button class="filter-tab" onclick="filterGroup('H',this)">H</button>
-      <button class="filter-tab" onclick="filterGroup('I',this)">I</button>
-      <button class="filter-tab" onclick="filterGroup('J',this)">J</button>
-      <button class="filter-tab" onclick="filterGroup('K',this)">K</button>
-      <button class="filter-tab" onclick="filterGroup('L',this)">L</button>
       <button class="filter-tab mgr-tab" onclick="filterGroup('SIEVE',this)" style="color:#e879f9;border-color:#4a1942">SIEVE</button>
       <button class="filter-tab mgr-tab" onclick="filterGroup('CRAIG',this)" style="color:#38bdf8;border-color:#1a3a4a">CRAIG</button>
       <button class="filter-tab mgr-tab" onclick="filterGroup('WEILER',this)" style="color:#4ade80;border-color:#1a3a1a">WEILER</button>
@@ -147,6 +148,14 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <button class="filter-tab mgr-tab" onclick="filterGroup('ROBERTS',this)" style="color:#f87171;border-color:#3a1a1a">ROBERTS</button>
     </div>
     <div id="matches-content"></div>
+  </div>
+
+  <div id="view-groups" class="view">
+    <div class="section-title">Group Standings</div>
+    <div id="groups-loading" class="loading"><div class="spinner"></div><div>Loading group standings...</div></div>
+    <div id="groups-content" style="display:none">
+      <div class="groups-grid" id="groups-grid"></div>
+    </div>
   </div>
 
   <div id="view-bracket" class="view">
@@ -246,7 +255,7 @@ const SCHEDULE=[
 ];
 
 // Team name aliases for matching
-const ALIASES={'czechia':'czech republic','dr congo':'dr congo','ivory coast':'ivory coast','curazao':'curazao','cabo verde':'cabo verde','cape verde':'cabo verde','ir iran':'iran','korea republic':'south korea','united states':'usa','bosnia-herzegovina':'bosnia-herzegovina','south africa':'south africa'};
+const ALIASES={'czechia':'czech republic','dr congo':'dr congo','congo dr':'dr congo','democratic republic of congo':'dr congo',"côte d'ivoire":'ivory coast',"cote d'ivoire":'ivory coast','curazao':'curazao','curaçao':'curazao','cabo verde':'cabo verde','cape verde':'cabo verde','ir iran':'iran','korea republic':'south korea','republic of korea':'south korea','united states':'usa','bosnia-herzegovina':'bosnia-herzegovina','bosnia and herzegovina':'bosnia-herzegovina','saudi arabia':'saudi arabia','south africa':'south africa','new zealand':'new zealand'};
 
 // Build reverse lookup: normalized team name -> manager
 const TEAM_MGR={};
@@ -260,19 +269,32 @@ function getMgr(name){
 }
 
 let liveScores={};
+let espnEvents=[];
 
 async function fetchLiveScores(){
   try{
-    const r=await fetch('https://corsproxy.io/?url=https://worldcup26.ir/get/games',{signal:AbortSignal.timeout(8000)});
+    // Fetch full group stage date range in one call
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627',{signal:AbortSignal.timeout(8000)});
     if(!r.ok)return;
     const data=await r.json();
-    const games=Array.isArray(data)?data:(data.games||data.matches||[]);
+    const events=data.events||[];
+    espnEvents=events;
     liveScores={};
-    for(const g of games){
-      const key=`${(g.home_team||g.home||'').toLowerCase()}|${(g.away_team||g.away||'').toLowerCase()}`;
-      liveScores[key]={hs:g.home_score??g.home_goals??null,as:g.away_score??g.away_goals??null,status:g.status||g.phase||''};
+    for(const e of events){
+      const comp=e.competitions?.[0];
+      if(!comp)continue;
+      const home=comp.competitors?.find(c=>c.homeAway==='home');
+      const away=comp.competitors?.find(c=>c.homeAway==='away');
+      if(!home||!away)continue;
+      const homeName=(home.team?.displayName||'').toLowerCase();
+      const awayName=(away.team?.displayName||'').toLowerCase();
+      const status=comp.status?.type?.name||'';
+      const state=comp.status?.type?.state||'';
+      const hs=state==='pre'?null:parseInt(home.score)||0;
+      const as_=state==='pre'?null:parseInt(away.score)||0;
+      liveScores[`${homeName}|${awayName}`]={hs:hs===null?null:hs,as:as_===null?null:as_,status:status};
     }
-  }catch(e){}
+  }catch(e){console.warn('ESPN API error:',e);}
 }
 
 function getLive(home,away){
@@ -292,8 +314,8 @@ function buildStats(){
     if(hs===null||as_===null)continue;
     const hg=parseInt(hs)||0,ag=parseInt(as_)||0;
     const st=(live?.status||'').toUpperCase();
-    const isLive=['1H','2H','HT','ET','PEN','IN_PROGRESS','LIVE'].some(s=>st.includes(s));
-    const isFT=!isLive;
+    const isLive=['STATUS_IN_PROGRESS','STATUS_HALFTIME','STATUS_END_PERIOD'].some(s=>st.includes(s));
+    const isFT=!isLive&&st.includes('STATUS_FINAL');
     for(const[team,goals,opp]of[[m.home,hg,ag],[m.away,ag,hg]]){
       const mgr=getMgr(team);
       if(!mgr)continue;
@@ -347,54 +369,171 @@ function filterGroup(g,btn){
 }
 
 function goToManager(mgr){
-  // Switch to matches tab and filter to that manager
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-matches').classList.add('active');
   document.querySelectorAll('nav button')[1].classList.add('active');
-  // Find and click the matching manager tab
   const tabs=document.querySelectorAll('.filter-tab.mgr-tab');
   tabs.forEach(t=>{ if(t.textContent===mgr){ filterGroup(mgr,t); } });
 }
 
+let groupStandings=[];
+
+async function fetchGroupStandings(){
+  try{
+    const r=await fetch('https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',{signal:AbortSignal.timeout(8000)});
+    if(!r.ok)return;
+    const data=await r.json();
+    groupStandings=data.children||data.standings||data.groups||[];
+  }catch(e){console.warn('Standings API error:',e);}
+}
+
+function renderGroups(){
+  if(groupStandings.length===0){
+    // Build from SCHEDULE data as fallback
+    document.getElementById('groups-loading').style.display='none';
+    document.getElementById('groups-content').style.display='block';
+    document.getElementById('groups-grid').innerHTML='<div style="color:var(--muted);padding:20px">Group standings will appear once matches begin.</div>';
+    return;
+  }
+
+  const grid=document.getElementById('groups-grid');
+  grid.innerHTML=groupStandings.map(group=>{
+    const groupName=group.name||group.abbreviation||'Group';
+    const entries=group.standings?.entries||group.entries||[];
+
+    const rows=entries.map((entry,idx)=>{
+      const team=entry.team||{};
+      const teamName=team.displayName||team.name||'';
+      const stats={};
+      (entry.stats||[]).forEach(s=>{ stats[s.name||s.abbreviation]=s.value; });
+      const w=stats.wins||stats.w||0;
+      const d=stats.draws||stats.d||0;
+      const l=stats.losses||stats.l||0;
+      const gf=stats.pointsFor||stats.gf||stats.goalsScored||0;
+      const ga=stats.pointsAgainst||stats.ga||stats.goalsConceded||0;
+      const gd=(gf-ga>=0?'+':'')+(gf-ga);
+      const pts=stats.points||stats.pts||(w*3+d);
+      const played=stats.gamesPlayed||stats.played||(w+d+l);
+      const mgr=getMgr(teamName);
+      const mgrTag=mgr?` <span class="mgr-tag mgr-${mgr}">${mgr}</span>`:'';
+      const advClass=idx<2?'advancing':'';
+      return`<tr class="${advClass}"><td>${teamName}${mgrTag}</td><td>${played}</td><td>${w}</td><td>${d}</td><td>${l}</td><td>${gf}</td><td>${ga}</td><td>${gd}</td><td class="pts-bold">${pts}</td></tr>`;
+    }).join('');
+
+    return`<div class="group-standing-block">
+      <div class="group-standing-header">${groupName}</div>
+      <table class="group-standing-table">
+        <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('groups-loading').style.display='none';
+  document.getElementById('groups-content').style.display='block';
+}
+
 function renderMatches(){
-  let filtered=SCHEDULE;
+  // Build match list from ESPN events, fall back to SCHEDULE if no API data yet
+  let matches=[];
+
+  if(espnEvents.length>0){
+    for(const e of espnEvents){
+      const comp=e.competitions?.[0];
+      if(!comp)continue;
+      const homeC=comp.competitors?.find(c=>c.homeAway==='home');
+      const awayC=comp.competitors?.find(c=>c.homeAway==='away');
+      if(!homeC||!awayC)continue;
+      const homeName=homeC.team?.displayName||'';
+      const awayName=awayC.team?.displayName||'';
+      const status=comp.status?.type?.name||'';
+      const state=comp.status?.type?.state||'';
+      const clock=comp.status?.displayClock||'';
+      const hs=state==='pre'?null:parseInt(homeC.score)||0;
+      const as_=state==='pre'?null:parseInt(awayC.score)||0;
+      const dateStr=e.date?.substring(0,10)||'';
+      const detail=comp.status?.type?.detail||'';
+      // Get local kickoff time from detail (e.g. "Thu, June 11th at 3:00 PM EDT")
+      const timeMatch=detail.match(/at (.+)$/);
+      const timeStr=timeMatch?timeMatch[1]:'TBD';
+      // Get group from SCHEDULE lookup
+      const schedMatch=SCHEDULE.find(s=>
+        s.home.toLowerCase()===homeName.toLowerCase()||
+        s.away.toLowerCase()===homeName.toLowerCase()||
+        (ALIASES[homeName.toLowerCase()]&&DRAFT[getMgr(homeName)||''])||
+        s.home.toLowerCase()===awayName.toLowerCase()
+      );
+      const group=schedMatch?.group||'';
+      const venue=comp.venue?.fullName||schedMatch?.venue||'';
+      matches.push({home:homeName,away:awayName,hs,as:as_,status,state,clock,date:dateStr,time:timeStr,group,venue});
+    }
+  } else {
+    // Fallback to hardcoded schedule
+    matches=SCHEDULE.map(m=>({...m,as:m.as,status:'',state:'pre',clock:'',time:m.time}));
+  }
+
+  // Filter
+  let filtered=matches;
   if(MANAGERS.includes(activeFilter)){
     const mgrTeams=getMgrTeams(activeFilter);
-    filtered=SCHEDULE.filter(m=>mgrTeams.some(t=>m.home.toLowerCase()===t||m.away.toLowerCase()===t||(ALIASES[m.home.toLowerCase()]&&ALIASES[m.home.toLowerCase()]===t)||(ALIASES[m.away.toLowerCase()]&&ALIASES[m.away.toLowerCase()]===t)));
+    filtered=matches.filter(m=>
+      mgrTeams.some(t=>
+        m.home.toLowerCase()===t||m.away.toLowerCase()===t||
+        (ALIASES[m.home.toLowerCase()]&&ALIASES[m.home.toLowerCase()]===t)||
+        (ALIASES[m.away.toLowerCase()]&&ALIASES[m.away.toLowerCase()]===t)
+      )
+    );
   }else if(activeFilter!=='ALL'){
-    filtered=SCHEDULE.filter(m=>m.group===activeFilter);
+    filtered=matches.filter(m=>m.group===activeFilter);
   }
+
+  // Sort: live first, then by date
+  filtered.sort((a,b)=>{
+    const aLive=a.status.includes('IN_PROGRESS')||a.status.includes('HALFTIME');
+    const bLive=b.status.includes('IN_PROGRESS')||b.status.includes('HALFTIME');
+    if(aLive&&!bLive)return -1;
+    if(!aLive&&bLive)return 1;
+    return a.date.localeCompare(b.date);
+  });
+
+  // Group by date
   const byDate={};
-  for(const m of filtered){if(!byDate[m.date])byDate[m.date]=[];byDate[m.date].push(m);}
+  for(const m of filtered){
+    if(!byDate[m.date])byDate[m.date]=[];
+    byDate[m.date].push(m);
+  }
+
   document.getElementById('matches-content').innerHTML=Object.keys(byDate).sort().map(date=>{
     const label=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
     const rows=byDate[date].map(m=>{
-      const live=getLive(m.home,m.away);
-      const hs=live?live.hs:m.hs;
-      const as_=live?live.as:m.as;
-      const st=(live?.status||'').toUpperCase();
-      const isLive=['1H','2H','HT','ET','PEN','IN_PROGRESS','LIVE'].some(s=>st.includes(s));
-      const isFT=hs!==null&&as_!==null&&!isLive;
+      const st=m.status.toUpperCase();
+      const isLive=['IN_PROGRESS','HALFTIME','END_PERIOD'].some(s=>st.includes(s));
+      const isFT=st.includes('FINAL');
       let scoreHTML;
-      if(isLive)scoreHTML=`<span class="match-score live">${hs}-${as_}</span><br><span class="status-badge live">LIVE</span>`;
-      else if(isFT)scoreHTML=`<span class="match-score ft">${hs}-${as_}</span><br><span class="status-badge ft">FT</span>`;
-      else scoreHTML=`<span class="match-score">${m.time}</span><br><span class="status-badge upcoming">Grp ${m.group}</span>`;
+      if(isLive){
+        scoreHTML=`<span class="match-score live">${m.hs} - ${m.as}</span><br><span class="status-badge live">🔴 ${m.clock}</span>`;
+      }else if(isFT){
+        scoreHTML=`<span class="match-score ft">${m.hs} - ${m.as}</span><br><span class="status-badge ft">FT</span>`;
+      }else{
+        scoreHTML=`<span class="match-score">${m.time}</span><br><span class="status-badge upcoming">${m.group?'Grp '+m.group:''}</span>`;
+      }
       const hm=getMgr(m.home),am=getMgr(m.away);
       const ht=hm?`<br><span class="mgr-tag mgr-${hm}">${hm}</span>`:'';
       const at=am?`<br><span class="mgr-tag mgr-${am}">${am}</span>`:'';
       return`<div class="match-row"><div class="match-home"><div class="match-home-name">${m.home}${ht}</div></div><div class="match-center">${scoreHTML}</div><div class="match-away"><div class="match-away-name">${m.away}${at}</div><div class="match-meta">${m.venue}</div></div></div>`;
     }).join('');
     return`<div class="group-block"><div class="day-header">${label}</div>${rows}</div>`;
-  }).join('');
+  }).join('') || '<div style="padding:20px;color:var(--muted);text-align:center">No matches found</div>';
 }
 
 async function loadData(){
   document.getElementById('last-updated').textContent='Refreshing...';
-  await fetchLiveScores();
+  await Promise.all([fetchLiveScores(), fetchGroupStandings()]);
   const stats=buildStats();
   renderStandings(stats);
   renderMatches();
+  renderGroups();
   document.getElementById('last-updated').textContent=`Last updated: ${new Date().toLocaleTimeString()}`;
 }
 

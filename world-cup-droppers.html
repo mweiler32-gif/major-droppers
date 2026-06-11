@@ -140,7 +140,11 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <button class="filter-tab" onclick="filterGroup('J',this)">J</button>
       <button class="filter-tab" onclick="filterGroup('K',this)">K</button>
       <button class="filter-tab" onclick="filterGroup('L',this)">L</button>
-      <button class="filter-tab" onclick="filterGroup('MY',this)">MY TEAMS</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('SIEVE',this)" style="color:#e879f9;border-color:#4a1942">SIEVE</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('CRAIG',this)" style="color:#38bdf8;border-color:#1a3a4a">CRAIG</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('WEILER',this)" style="color:#4ade80;border-color:#1a3a1a">WEILER</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('PALMER',this)" style="color:#fb923c;border-color:#3a2a1a">PALMER</button>
+      <button class="filter-tab mgr-tab" onclick="filterGroup('ROBERTS',this)" style="color:#f87171;border-color:#3a1a1a">ROBERTS</button>
     </div>
     <div id="matches-content"></div>
   </div>
@@ -259,7 +263,7 @@ let liveScores={};
 
 async function fetchLiveScores(){
   try{
-    const r=await fetch('https://worldcup26.ir/get/games',{signal:AbortSignal.timeout(5000)});
+    const r=await fetch('https://corsproxy.io/?url=https://worldcup26.ir/get/games',{signal:AbortSignal.timeout(8000)});
     if(!r.ok)return;
     const data=await r.json();
     const games=Array.isArray(data)?data:(data.games||data.matches||[]);
@@ -311,10 +315,9 @@ function buildStats(){
 
 function renderStandings(stats){
   const sorted=[...MANAGERS].sort((a,b)=>stats[b].pts-stats[a].pts);
-  const medals=['🥇','🥈','🥉','',''];
   document.getElementById('manager-tbody').innerHTML=sorted.map((mgr,i)=>{
     const s=stats[mgr];
-    return`<tr><td class="num rank-cell">${medals[i]||i+1}</td><td class="manager-name-cell" style="color:${MANAGER_COLORS[mgr]}">${mgr}</td><td class="num pts-cell">${s.pts.toFixed(1)}</td><td class="num">${s.w}</td><td class="num">${s.d}</td><td class="num">${s.l}</td><td class="num">${s.gf}</td></tr>`;
+    return`<tr><td class="num rank-cell">${i+1}</td><td class="manager-name-cell" style="color:${MANAGER_COLORS[mgr]};cursor:pointer" onclick="goToManager('${mgr}')">${mgr}</td><td class="num pts-cell">${s.pts.toFixed(1)}</td><td class="num">${s.w}</td><td class="num">${s.d}</td><td class="num">${s.l}</td><td class="num">${s.gf}</td></tr>`;
   }).join('');
   document.getElementById('manager-grid').innerHTML=sorted.map((mgr,i)=>{
     const s=stats[mgr];
@@ -324,26 +327,41 @@ function renderStandings(stats){
       const cc=td.status==='playing'?'playing':td.w>0?'won':td.l>0?'lost':'';
       return`<div class="team-chip ${cc}" title="${(td.pts||0).toFixed(1)} pts">${team}</div>`;
     }).join('');
-    return`<div class="manager-card ${rc}"><div class="manager-rank">${i+1}</div><div class="manager-name" style="color:${MANAGER_COLORS[mgr]}">${mgr}</div><div class="manager-pts">${s.pts.toFixed(1)}</div><div class="manager-pts-label">Pts · ${s.w}W ${s.d}D ${s.l}L · ${s.gf}GF</div><div class="manager-teams">${chips}</div></div>`;
+    return`<div class="manager-card ${rc}"><div class="manager-rank">${i+1}</div><div class="manager-name" style="color:${MANAGER_COLORS[mgr]};cursor:pointer" onclick="goToManager('${mgr}')">${mgr}</div><div class="manager-pts">${s.pts.toFixed(1)}</div><div class="manager-pts-label">Pts · ${s.w}W ${s.d}D ${s.l}L · ${s.gf}GF</div><div class="manager-teams">${chips}</div></div>`;
   }).join('');
   document.getElementById('standings-loading').style.display='none';
   document.getElementById('standings-content').style.display='block';
 }
 
 let activeFilter='ALL';
-const MY_TEAMS=DRAFT['WEILER'].map(t=>t.toLowerCase());
+
+function getMgrTeams(mgr){
+  return DRAFT[mgr].map(t=>t.toLowerCase());
+}
 
 function filterGroup(g,btn){
   activeFilter=g;
   document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  if(btn)btn.classList.add('active');
   renderMatches();
+}
+
+function goToManager(mgr){
+  // Switch to matches tab and filter to that manager
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-matches').classList.add('active');
+  document.querySelectorAll('nav button')[1].classList.add('active');
+  // Find and click the matching manager tab
+  const tabs=document.querySelectorAll('.filter-tab.mgr-tab');
+  tabs.forEach(t=>{ if(t.textContent===mgr){ filterGroup(mgr,t); } });
 }
 
 function renderMatches(){
   let filtered=SCHEDULE;
-  if(activeFilter==='MY'){
-    filtered=SCHEDULE.filter(m=>MY_TEAMS.some(t=>m.home.toLowerCase()===t||m.away.toLowerCase()===t||(ALIASES[m.home.toLowerCase()]&&ALIASES[m.home.toLowerCase()]===t)||(ALIASES[m.away.toLowerCase()]&&ALIASES[m.away.toLowerCase()]===t)));
+  if(MANAGERS.includes(activeFilter)){
+    const mgrTeams=getMgrTeams(activeFilter);
+    filtered=SCHEDULE.filter(m=>mgrTeams.some(t=>m.home.toLowerCase()===t||m.away.toLowerCase()===t||(ALIASES[m.home.toLowerCase()]&&ALIASES[m.home.toLowerCase()]===t)||(ALIASES[m.away.toLowerCase()]&&ALIASES[m.away.toLowerCase()]===t)));
   }else if(activeFilter!=='ALL'){
     filtered=SCHEDULE.filter(m=>m.group===activeFilter);
   }

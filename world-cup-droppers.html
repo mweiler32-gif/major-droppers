@@ -302,48 +302,32 @@ let espnEvents=[];
 
 async function fetchLiveScores(){
   try{
-    // Fetch today's live scores (no date param = current/live games)
-    const [r1, r2] = await Promise.all([
-      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=20',{signal:AbortSignal.timeout(8000)}),
-      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627',{signal:AbortSignal.timeout(8000)})
-    ]);
-
-    const allEvents=[];
-    if(r2.ok){ const d=await r2.json(); (d.events||[]).forEach(e=>allEvents.push({e,live:false})); }
-    if(r1.ok){ const d=await r1.json(); (d.events||[]).forEach(e=>allEvents.push({e,live:true})); }
-
-    // Build espnEvents from range (full schedule), override scores with live data
-    const eventMap={};
-    // First pass: full schedule
-    for(const {e} of allEvents.filter(x=>!x.live)){
-      eventMap[e.id]=e;
-    }
-    // Second pass: overlay live events (overwrite score/status)
-    for(const {e} of allEvents.filter(x=>x.live)){
-      eventMap[e.id]=e;
-    }
-    espnEvents=Object.values(eventMap);
-
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627',{signal:AbortSignal.timeout(8000)});
+    if(!r.ok)return;
+    const data=await r.json();
+    espnEvents=data.events||[];
     liveScores={};
     for(const e of espnEvents){
       const comp=e.competitions?.[0];
       if(!comp)continue;
-      const home=comp.competitors?.find(c=>c.homeAway==='home');
-      const away=comp.competitors?.find(c=>c.homeAway==='away');
-      if(!home||!away)continue;
-      const homeName=(home.team?.displayName||'').toLowerCase();
-      const awayName=(away.team?.displayName||'').toLowerCase();
+      const homeC=comp.competitors?.find(c=>c.homeAway==='home');
+      const awayC=comp.competitors?.find(c=>c.homeAway==='away');
+      if(!homeC||!awayC)continue;
+      const homeName=(homeC.team?.displayName||'').toLowerCase();
+      const awayName=(awayC.team?.displayName||'').toLowerCase();
       const status=comp.status?.type?.name||'';
       const state=comp.status?.type?.state||'';
-      const hs=state==='pre'?null:parseInt(home.score)||0;
-      const as_=state==='pre'?null:parseInt(away.score)||0;
-      liveScores[`${homeName}|${awayName}`]={hs,as:as_,status};
+      const hs=state==='pre'?null:parseInt(homeC.score)||0;
+      const as_=state==='pre'?null:parseInt(awayC.score)||0;
+      liveScores[`${homeName}|${awayName}`]={home:homeName,away:awayName,hs,as:as_,status};
+      liveScores[`${awayName}|${homeName}`]={home:homeName,away:awayName,hs,as:as_,status};
     }
   }catch(e){console.warn('ESPN API error:',e);}
 }
 
 function getLive(home,away){
-  return liveScores[`${home.toLowerCase()}|${away.toLowerCase()}`]||null;
+  return liveScores[`${home.toLowerCase()}|${away.toLowerCase()}`]||
+         liveScores[`${away.toLowerCase()}|${home.toLowerCase()}`]||null;
 }
 
 function buildStats(){
@@ -354,17 +338,22 @@ function buildStats(){
   }
   for(const m of SCHEDULE){
     const live=getLive(m.home,m.away);
-    const hs=live?live.hs:m.hs;
-    const as_=live?live.as:m.as;
-    if(hs===null||as_===null)continue;
-    const hg=parseInt(hs)||0,ag=parseInt(as_)||0;
-    const st=(live?.status||'').toUpperCase();
-    const isLive=['STATUS_IN_PROGRESS','STATUS_HALFTIME','STATUS_END_PERIOD'].some(s=>st.includes(s));
-    const isFT=!isLive&&st.includes('STATUS_FINAL');
+    if(!live||live.hs===null||live.as===null)continue;
+    const st=(live.status||'').toUpperCase();
+    const isLive=['IN_PROGRESS','HALFTIME','END_PERIOD'].some(s=>st.includes(s));
+    const isFT=st.includes('FINAL');
+    if(!isLive&&!isFT)continue;
+    // live stores home/away from ESPN's perspective
+    const espnHomeIsOurHome=live.home===m.home.toLowerCase();
+    const hg=espnHomeIsOurHome?live.hs:live.as;
+    const ag=espnHomeIsOurHome?live.as:live.hs;
     for(const[team,goals,opp]of[[m.home,hg,ag],[m.away,ag,hg]]){
       const mgr=getMgr(team);
       if(!mgr)continue;
-      const key=Object.keys(stats[mgr].teams).find(k=>k.toLowerCase()===team.toLowerCase()||(ALIASES[team.toLowerCase()]&&ALIASES[team.toLowerCase()]===k.toLowerCase()));
+      const key=Object.keys(stats[mgr].teams).find(k=>
+        k.toLowerCase()===team.toLowerCase()||
+        (ALIASES[team.toLowerCase()]&&ALIASES[team.toLowerCase()]===k.toLowerCase())
+      );
       if(!key)continue;
       const t=stats[mgr].teams[key];
       t.gf+=goals;
@@ -574,11 +563,11 @@ function renderMatches(){
 
 async function loadData(){
   document.getElementById('last-updated').textContent='Refreshing...';
-  await Promise.all([fetchLiveScores(), fetchGroupStandings()]);
+  await fetchLiveScores();
+  fetchGroupStandings().then(()=>renderGroups()); // non-blocking, groups tab loads independently
   const stats=buildStats();
   renderStandings(stats);
   renderMatches();
-  renderGroups();
   document.getElementById('last-updated').textContent=`Last updated: ${new Date().toLocaleTimeString()}`;
 }
 

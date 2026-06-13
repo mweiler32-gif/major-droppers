@@ -104,7 +104,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div class="logo-ball">⚽</div>
       <div>
         <div class="logo-text">World Cup Droppers</div>
-        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v1.6</span></div>
+        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.0</span></div>
       </div>
     </div>
     <nav>
@@ -302,10 +302,25 @@ let espnEvents=[];
 
 async function fetchLiveScores(){
   try{
-    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627',{signal:AbortSignal.timeout(8000)});
-    if(!r.ok)return;
-    const data=await r.json();
-    espnEvents=data.events||[];
+    const [rToday, rRange] = await Promise.allSettled([
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=50&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'}),
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'})
+    ]);
+
+    const eventMap={};
+
+    // Date range first (full schedule baseline)
+    if(rRange.status==='fulfilled' && rRange.value.ok){
+      const data=await rRange.value.json();
+      for(const e of (data.events||[])) eventMap[e.id]=e;
+    }
+    // Today's data overrides — this endpoint reflects live/final status correctly
+    if(rToday.status==='fulfilled' && rToday.value.ok){
+      const data=await rToday.value.json();
+      for(const e of (data.events||[])) eventMap[e.id]=e;
+    }
+
+    espnEvents=Object.values(eventMap);
     liveScores={};
     for(const e of espnEvents){
       const comp=e.competitions?.[0];
@@ -351,7 +366,7 @@ function buildStats(){
       const s={};
       (entry.stats||[]).forEach(stat=>{ s[stat.name||stat.abbreviation]=stat.value; });
       const w=parseInt(s.wins||s.w||0);
-      const d=parseInt(s.draws||s.d||0);
+      const d=parseInt(s.draws||s.ties||s.d||0);
       const l=parseInt(s.losses||s.l||0);
       const gf=parseInt(s.pointsFor||s.gf||s.goalsScored||0);
       const played=w+d+l;
@@ -414,7 +429,7 @@ let groupStandings=[];
 
 async function fetchGroupStandings(){
   try{
-    const r=await fetch('https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',{signal:AbortSignal.timeout(8000)});
+    const r=await fetch(`https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'});
     if(!r.ok)return;
     const data=await r.json();
     groupStandings=data.children||data.standings||data.groups||[];
@@ -441,7 +456,7 @@ function renderGroups(){
       const stats={};
       (entry.stats||[]).forEach(s=>{ stats[s.name||s.abbreviation]=s.value; });
       const w=stats.wins||stats.w||0;
-      const d=stats.draws||stats.d||0;
+      const d=stats.draws||stats.ties||stats.d||0;
       const l=stats.losses||stats.l||0;
       const gf=stats.pointsFor||stats.gf||stats.goalsScored||0;
       const ga=stats.pointsAgainst||stats.ga||stats.goalsConceded||0;
@@ -567,6 +582,7 @@ async function loadData(){
   const stats=buildStats();
   renderStandings(stats);
   renderGroups();
+  renderMatches(); // show current/cached data immediately
   // Scoreboard drives matches display only — non-blocking
   fetchLiveScores().then(()=>renderMatches());
   document.getElementById('last-updated').textContent=`Last updated: ${new Date().toLocaleTimeString()}`;

@@ -86,6 +86,11 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
 .group-standing-table tr.advancing td{background:rgba(0,168,80,0.08)}
 .group-standing-table tr.advancing td:first-child{border-left:3px solid var(--green)}
 .pts-bold{font-weight:700;color:var(--green)}
+.form-circles{display:flex;gap:3px;align-items:center}
+.form-circle{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.form-w{background:#1a3a1a;color:#4A8C5C;border:1px solid #4A8C5C}
+.form-l{background:#3a1a1a;color:#B54A4A;border:1px solid #B54A4A}
+.form-d{background:#2a2a2a;color:#888899;border:1px solid #444}
 .bracket-notice .icon{font-size:48px;margin-bottom:16px}
 .bracket-notice h3{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;margin-bottom:8px;color:var(--text)}
 .loading{text-align:center;padding:60px 20px;color:var(--muted)}
@@ -104,7 +109,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div class="logo-ball">⚽</div>
       <div>
         <div class="logo-text">World Cup Droppers</div>
-        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.0</span></div>
+        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.1</span></div>
       </div>
     </div>
     <nav>
@@ -299,6 +304,7 @@ function getMgr(name){
 
 let liveScores={};
 let espnEvents=[];
+let teamForm={};
 
 async function fetchLiveScores(){
   try{
@@ -322,6 +328,7 @@ async function fetchLiveScores(){
 
     espnEvents=Object.values(eventMap);
     liveScores={};
+    teamForm={};
     for(const e of espnEvents){
       const comp=e.competitions?.[0];
       if(!comp)continue;
@@ -336,6 +343,9 @@ async function fetchLiveScores(){
       const as_=state==='pre'?null:parseInt(awayC.score)||0;
       liveScores[`${homeName}|${awayName}`]={home:homeName,away:awayName,hs,as:as_,status};
       liveScores[`${awayName}|${homeName}`]={home:homeName,away:awayName,hs,as:as_,status};
+      // Store form strings per team
+      if(homeC.form) teamForm[homeName]=homeC.form;
+      if(awayC.form) teamForm[awayName]=awayC.form;
     }
   }catch(e){console.warn('ESPN API error:',e);}
 }
@@ -450,29 +460,43 @@ function renderGroups(){
     const groupName=group.name||group.abbreviation||'Group';
     const entries=group.standings?.entries||group.entries||[];
 
-    const rows=entries.map((entry,idx)=>{
+    const sortedEntries=[...entries].sort((a,b)=>{
+      const getVal=(e,name)=>(e.stats||[]).find(x=>x.name===name)?.value||0;
+      const ptsDiff=getVal(b,'points')-getVal(a,'points');
+      if(ptsDiff!==0)return ptsDiff;
+      return getVal(b,'pointDifferential')-getVal(a,'pointDifferential');
+    });
+
+    const rows=sortedEntries.map((entry,idx)=>{
       const team=entry.team||{};
       const teamName=team.displayName||team.name||'';
       const stats={};
       (entry.stats||[]).forEach(s=>{ stats[s.name||s.abbreviation]=s.value; });
-      const w=stats.wins||stats.w||0;
-      const d=stats.draws||stats.ties||stats.d||0;
-      const l=stats.losses||stats.l||0;
-      const gf=stats.pointsFor||stats.gf||stats.goalsScored||0;
-      const ga=stats.pointsAgainst||stats.ga||stats.goalsConceded||0;
+      const w=parseInt(stats.wins||stats.w||0);
+      const d=parseInt(stats.draws||stats.ties||stats.d||0);
+      const l=parseInt(stats.losses||stats.l||0);
+      const gf=parseInt(stats.pointsFor||stats.gf||stats.goalsScored||0);
+      const ga=parseInt(stats.pointsAgainst||stats.ga||stats.goalsConceded||0);
       const gd=(gf-ga>=0?'+':'')+(gf-ga);
-      const pts=stats.points||stats.pts||(w*3+d);
+      const pts=parseInt(stats.points||stats.pts||(w*3+d));
       const played=stats.gamesPlayed||stats.played||(w+d+l);
       const mgr=getMgr(teamName);
       const mgrTag=mgr?` <span class="mgr-tag mgr-${mgr}">${mgr}</span>`:'';
       const advClass=idx<2?'advancing':'';
-      return`<tr class="${advClass}"><td>${teamName}${mgrTag}</td><td>${played}</td><td>${w}</td><td>${d}</td><td>${l}</td><td>${gf}</td><td>${ga}</td><td>${gd}</td><td class="pts-bold">${pts}</td></tr>`;
+      const formStr=teamForm[teamName.toLowerCase()]||teamForm[teamName]||'';
+      const last5=formStr.slice(-5).split('').filter(Boolean);
+      const formHTML=last5.length>0?`<div class="form-circles">${last5.map(r=>{
+        if(r==='W')return'<div class="form-circle form-w">✓</div>';
+        if(r==='L')return'<div class="form-circle form-l">✗</div>';
+        return'<div class="form-circle form-d">–</div>';
+      }).join('')}</div>`:'-';
+      return`<tr class="${advClass}"><td>${teamName}${mgrTag}</td><td>${played}</td><td>${w}</td><td>${d}</td><td>${l}</td><td>${gf}</td><td>${ga}</td><td>${gd}</td><td class="pts-bold">${pts}</td><td>${formHTML}</td></tr>`;
     }).join('');
 
     return`<div class="group-standing-block">
       <div class="group-standing-header">${groupName}</div>
       <table class="group-standing-table">
-        <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th></tr></thead>
+        <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th><th>Form</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
@@ -557,7 +581,7 @@ function renderMatches(){
     const rows=byDate[date].map(m=>{
       const st=m.status.toUpperCase();
       const isLive=['IN_PROGRESS','HALFTIME','END_PERIOD'].some(s=>st.includes(s));
-      const isFT=st.includes('FINAL');
+      const isFT=['FULL_TIME','STATUS_FINAL','FINAL'].some(s=>st.includes(s));
       let scoreHTML;
       if(isLive){
         scoreHTML=`<span class="match-score live">${m.hs} - ${m.as}</span><br><span class="status-badge live">🔴 ${m.clock}</span>`;
@@ -567,8 +591,19 @@ function renderMatches(){
         scoreHTML=`<span class="match-score">${m.time}</span><br><span class="status-badge upcoming">${m.group?'Grp '+m.group:''}</span>`;
       }
       const hm=getMgr(m.home),am=getMgr(m.away);
-      const ht=hm?`<br><span class="mgr-tag mgr-${hm}">${hm}</span>`:'';
-      const at=am?`<br><span class="mgr-tag mgr-${am}">${am}</span>`:'';
+
+      // Calculate points earned from this match for each manager
+      function matchPts(goals, oppGoals, isFinished){
+        if(!isFinished||goals===null||oppGoals===null)return null;
+        const win=goals>oppGoals?3:0;
+        const draw=goals===oppGoals?1:0;
+        return (win+draw+(goals*0.5));
+      }
+      const hmPts=(isFT||isLive)?matchPts(m.hs,m.as,isFT):null;
+      const amPts=(isFT||isLive)?matchPts(m.as,m.hs,isFT):null;
+
+      const ht=hm?`<br><span class="mgr-tag mgr-${hm}">${hm}${hmPts!==null?' +'+hmPts.toFixed(1):''}</span>`:'';
+      const at=am?`<br><span class="mgr-tag mgr-${am}">${am}${amPts!==null?' +'+amPts.toFixed(1):''}</span>`:'';
       return`<div class="match-row"><div class="match-home"><div class="match-home-name">${m.home}${ht}</div></div><div class="match-center">${scoreHTML}</div><div class="match-away"><div class="match-away-name">${m.away}${at}</div><div class="match-meta">${m.venue}</div></div></div>`;
     }).join('');
     return`<div class="group-block"><div class="day-header">${label}</div>${rows}</div>`;

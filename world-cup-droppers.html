@@ -109,7 +109,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div class="logo-ball">⚽</div>
       <div>
         <div class="logo-text">World Cup Droppers</div>
-        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.1</span></div>
+        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.3</span></div>
       </div>
     </div>
     <nav>
@@ -308,23 +308,17 @@ let teamForm={};
 
 async function fetchLiveScores(){
   try{
-    const [rToday, rRange] = await Promise.allSettled([
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=50&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'}),
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100&dates=20260611-20260627&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'})
+    // Full tournament schedule — reliable for FT and upcoming
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const [rRange, rToday]=await Promise.all([
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=200&dates=20260611-20260719&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'}),
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${today}&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'})
     ]);
 
     const eventMap={};
-
-    // Date range first (full schedule baseline)
-    if(rRange.status==='fulfilled' && rRange.value.ok){
-      const data=await rRange.value.json();
-      for(const e of (data.events||[])) eventMap[e.id]=e;
-    }
-    // Today's data overrides — this endpoint reflects live/final status correctly
-    if(rToday.status==='fulfilled' && rToday.value.ok){
-      const data=await rToday.value.json();
-      for(const e of (data.events||[])) eventMap[e.id]=e;
-    }
+    if(rRange.ok){ const d=await rRange.json(); for(const e of (d.events||[])) eventMap[e.id]=e; }
+    // Today's fetch overwrites for live accuracy
+    if(rToday.ok){ const d=await rToday.json(); for(const e of (d.events||[])) eventMap[e.id]=e; }
 
     espnEvents=Object.values(eventMap);
     liveScores={};
@@ -343,7 +337,6 @@ async function fetchLiveScores(){
       const as_=state==='pre'?null:parseInt(awayC.score)||0;
       liveScores[`${homeName}|${awayName}`]={home:homeName,away:awayName,hs,as:as_,status};
       liveScores[`${awayName}|${homeName}`]={home:homeName,away:awayName,hs,as:as_,status};
-      // Store form strings per team
       if(homeC.form) teamForm[homeName]=homeC.form;
       if(awayC.form) teamForm[awayName]=awayC.form;
     }

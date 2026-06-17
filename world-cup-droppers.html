@@ -109,7 +109,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div class="logo-ball">⚽</div>
       <div>
         <div class="logo-text">World Cup Droppers</div>
-        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.3</span></div>
+        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.4</span></div>
       </div>
     </div>
     <nav>
@@ -308,17 +308,25 @@ let teamForm={};
 
 async function fetchLiveScores(){
   try{
-    // Full tournament schedule — reliable for FT and upcoming
-    const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
-    const [rRange, rToday]=await Promise.all([
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=200&dates=20260611-20260719&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'}),
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${today}&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'})
-    ]);
+    // Fetch each day individually to bypass ESPN CDN caching of date-range queries
+    const dates=[];
+    const start=new Date('2026-06-11');
+    const end=new Date('2026-06-28');
+    for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+      dates.push(d.toISOString().slice(0,10).replace(/-/g,''));
+    }
+
+    const results=await Promise.allSettled(
+      dates.map(dt=>fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}&_=${Date.now()}`,{signal:AbortSignal.timeout(8000),cache:'no-store'}))
+    );
 
     const eventMap={};
-    if(rRange.ok){ const d=await rRange.json(); for(const e of (d.events||[])) eventMap[e.id]=e; }
-    // Today's fetch overwrites for live accuracy
-    if(rToday.ok){ const d=await rToday.json(); for(const e of (d.events||[])) eventMap[e.id]=e; }
+    for(const r of results){
+      if(r.status==='fulfilled'&&r.value.ok){
+        const data=await r.value.json();
+        for(const e of (data.events||[])) eventMap[e.id]=e;
+      }
+    }
 
     espnEvents=Object.values(eventMap);
     liveScores={};

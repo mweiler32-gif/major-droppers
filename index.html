@@ -274,269 +274,99 @@
         isWriting.current = false;
       };
 
-      // Fetch scores from Google Sheet
+      // Fetch scores from ESPN API
       const fetchLiveScores = async () => {
-        if (!sheetUrl) {
-          setFetchError('No Google Sheet URL configured');
-          return;
-        }
-        
         setIsFetching(true);
         setFetchError('');
-        
         try {
-          // Try direct fetch first, then proxies as fallback
-          const corsProxies = [
-            (url) => url,
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-          ];
-          
-          let response;
-          for (const proxyFn of corsProxies) {
-            try {
-              response = await fetch(proxyFn(sheetUrl));
-              if (response.ok) break;
-            } catch (e) {
-              continue;
-            }
-          }
-          
-          if (!response || !response.ok) {
-            throw new Error('All fetch attempts failed');
-          }
-          
-          const text = await response.text();
-          const rows = text.split('\n').map(row => {
-            const cells = [];
-            let current = '';
-            let inQuotes = false;
-            for (let char of row) {
-              if (char === '"') {
-                inQuotes = !inQuotes;
-              } else if (char === ',' && !inQuotes) {
-                cells.push(current.trim().replace(/"/g, ''));
-                current = '';
-              } else {
-                current += char;
-              }
-            }
-            cells.push(current.trim().replace(/"/g, ''));
-            return cells;
-          });
-          
-          // Check for projected cut line
-          let foundCutLine = null;
-          for (let i = 0; i < rows.length; i++) {
-            const rowText = rows[i].join(' ').toLowerCase();
-            if (rowText.includes('projected cut') || rowText.includes('cut line')) {
-              // Try to extract the cut number (e.g., "+2", "E", "-1")
-              // Handle formats like "Projected Cut+1" or "Projected Cut +1" or "Projected Cut: E"
-              const match = rowText.match(/cut\s*[:\s]*([+-]?\d+|e)/i);
-              if (match) {
-                foundCutLine = match[1].toUpperCase();
-                // Add + sign if it's a positive number without sign
-                if (/^\d+$/.test(foundCutLine)) {
-                  foundCutLine = '+' + foundCutLine;
-                }
-              }
-              break;
-            }
-          }
-          setCutLine(foundCutLine);
-          
-          // Auto-detect format based on column structure
-          // In-progress: B=Pos, C=seed, D=Player, E=Score, F=Today, G=Thru, H=R1, I=R2, J=R3, K=R4
-          // Final: B=Pos, C=Player, D=Score, E=R1, F=R2, G=R3, H=R4, I=TOT, J=Earnings, K=FedEx
-          const detectFormat = () => {
-            const header = rows[0];
-            
-            // Check header row for format clues
-            const headerStr = (header || []).join(' ').toUpperCase();
-            if (headerStr.includes('EARNINGS') || headerStr.includes('FEDEX')) {
-              return 'final';
-            }
-            if (headerStr.includes('TODAY') || headerStr.includes('THRU')) {
-              return 'in-progress';
-            }
-            
-            // Fallback: check if index 1 looks like names (in-progress)
-            for (let i = 1; i < Math.min(rows.length, 10); i++) {
-              const col1 = rows[i]?.[1]; // PLAYER in in-progress
-              const col4 = rows[i]?.[4]; // R1 in final format (60-90 range)
-              
-              if (col4 && !isNaN(parseInt(col4)) && parseInt(col4) >= 60 && parseInt(col4) <= 90) {
-                return 'final';
-              }
-              if (col1 && col1.includes(' ') && /[a-zA-Z]{2,}/.test(col1)) {
-                return 'in-progress';
-              }
-            }
-            return 'in-progress';
-          };
-          
-          const format = detectFormat();
-          
-          // Detect which round we're in based on day of week
-          // Thursday = R1, Friday = R2, Saturday = R3, Sunday = R4
-          // For final format, set to 4 (tournament complete)
-          let detectedRound = 1;
-          if (format === 'final') {
-            detectedRound = 4; // Tournament complete
-          } else {
-            const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon, ..., 4=Thu, 5=Fri, 6=Sat
-            if (dayOfWeek === 4) detectedRound = 1;      // Thursday = R1
-            else if (dayOfWeek === 5) detectedRound = 2; // Friday = R2
-            else if (dayOfWeek === 6) detectedRound = 3; // Saturday = R3
-            else if (dayOfWeek === 0) detectedRound = 4; // Sunday = R4
-            else detectedRound = 4; // Default to R4 for Mon-Wed (tournament over)
-          }
-          
+          const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga');
+          if (!response.ok) throw new Error('ESPN API failed');
+          const data = await response.json();
+          const event = data && data.events && data.events[0];
+          if (!event) throw new Error('No event data');
+
+          const competition = event.competitions && event.competitions[0];
+          const competitors = (competition && competition.competitors) || [];
+          const status = competition && competition.status;
+          const detectedRound = (status && status.period) || 1;
           setTournamentRound(detectedRound);
-          
+          const isComplete = status && status.type && status.type.completed === true;
+          const format = isComplete ? 'final' : 'in-progress';
+
           const parsed = [];
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (row.length < 3) continue;
-            
-            let pos, name, score, today, thru, r1, r2, r3, r4, isCut;
-            
-            if (format === 'final') {
-              // Final format: 0=blank, 1=Pos, 2=Player, 3=Score, 4=R1, 5=R2, 6=R3, 7=R4
-              const rawPos = row[1]?.trim();
-              pos = rawPos?.replace(/[T\s"]/g, '');
-              name = row[2]?.trim();
-              score = row[3]?.trim();
-              today = null;
-              thru = 'F';
-              r1 = row[4];
-              r2 = row[5];
-              r3 = row[6];
-              r4 = row[7];
-              
-              // Check if player missed cut - in final format, cut players have:
-              // - POS = "-" or "CUT" or "MC"
-              // - R3/R4 = "--" or empty
-              const r3Val = String(r3 || '').trim();
-              const r4Val = String(r4 || '').trim();
-              const hasNoWeekendScores = r3Val === '--' || r3Val === '' || r4Val === '--' || r4Val === '';
-              isCut = rawPos === '-' || 
-                      rawPos?.toUpperCase() === 'CUT' || 
-                      rawPos?.toUpperCase() === 'MC' ||
-                      (hasNoWeekendScores && r1 && r2); // Has R1/R2 but no R3/R4
-              
-              // Skip header rows
-              if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
-            } else {
-              // Thursday (R1): 0=blank, 1=Pos, 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1...
-              // Friday-Sunday (R2-R4): 0=blank, 1=Pos, 2=blank, 3=Player, 4=Score, 5=Today, 6=Thru, 7=R1, 8=R2, 9=R3, 10=R4
-              const isThursday = new Date().getDay() === 4;
-              const rawPos = row[1]?.trim();
-              pos = rawPos?.replace(/[T\s"]/g, '');
-              if (isThursday) {
-                name = row[2]?.trim();
-                score = row[3]?.trim();
-                today = row[4]?.trim();
-                thru = row[5]?.trim()?.replace(/\*/g, '');
-                r1 = row[6];
-                r2 = row[7];
-                r3 = row[8];
-                r4 = row[9];
-              } else {
-                name = row[3]?.trim();
-                score = row[4]?.trim();
-                today = row[5]?.trim();
-                thru = row[6]?.trim()?.replace(/\*/g, '');
-                r1 = row[7];
-                r2 = row[8];
-                r3 = row[9];
-                r4 = row[10];
-              }
-              
-              // Check if player missed cut
-              isCut = rawPos?.toUpperCase() === 'CUT' || 
-                      rawPos?.toUpperCase() === 'MC' ||
-                      name?.toUpperCase().includes('CUT');
-              
-              // Skip header rows and cut line rows
-              if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
-              if (row.join(' ').toLowerCase().includes('projected cut')) continue;
+          for (var i = 0; i < competitors.length; i++) {
+            var comp = competitors[i];
+            var name = (comp.athlete && comp.athlete.displayName) || '';
+            if (!name) continue;
+            var statusType = (comp.status && comp.status.type && comp.status.type.name) || '';
+            var displayValue = (comp.status && comp.status.displayValue) || '';
+            var isCut = statusType === 'cut' || displayValue.toUpperCase() === 'CUT';
+            var isWD  = statusType === 'wd'  || displayValue.toUpperCase() === 'WD';
+            var posId = comp.status && comp.status.position && comp.status.position.id;
+            var position = posId ? parseInt(posId) : null;
+            var linescores = comp.linescores || [];
+            var rounds = [null, null, null, null];
+            for (var r = 0; r < 4; r++) {
+              var val = linescores[r] && linescores[r].value;
+              if (val !== undefined && val !== null && !isNaN(val)) rounds[r] = parseInt(val);
             }
-            
-            if (!name || name.length < 2) continue;
-            if (['PLAYER', 'NAME', 'GOLFER', 'POS', ''].includes(name.toUpperCase())) continue;
-            
-            const position = parseInt(pos) || null;
-            const rounds = [r1, r2, r3, r4].map(r => {
-              const n = parseInt(r);
-              return isNaN(n) ? null : n;
-            });
-            
-            parsed.push({ 
-              name, 
-              position, 
-              rounds, 
-              score: score || null,
-              today: today || null, 
-              thru: thru || null,
-              cut: isCut
-            });
+            var thru = (comp.status && comp.status.thru !== undefined) ? String(comp.status.thru) : null;
+            parsed.push({ name: name, position: position, rounds: rounds, score: displayValue || null, today: null, thru: thru, cut: isCut || isWD });
           }
-          
+
           setLiveScores(parsed);
           setLastFetch(new Date());
-          
-          // Auto-update scores for drafted golfers
+
           if (parsed.length > 0) {
-            const allGolfers = Object.values(teams).flat();
-            const newScores = { ...scores };
-            
-            parsed.forEach(p => {
-              const match = allGolfers.find(g => namesMatch(g, p.name));
-              
+            var allGolfers = Object.values(teams).reduce(function(acc, arr) { return acc.concat(arr); }, []);
+            var newScores = Object.assign({}, scores);
+            for (var j = 0; j < parsed.length; j++) {
+              var p = parsed[j];
+              var match = null;
+              for (var k = 0; k < allGolfers.length; k++) {
+                if (namesMatch(allGolfers[k], p.name)) { match = allGolfers[k]; break; }
+              }
               if (match) {
+                var existing = newScores[match] || {};
+                var existingRounds = existing.rounds || [null, null, null, null];
                 newScores[match] = {
-                  ...newScores[match],
-                  position: p.position || newScores[match]?.position,
-                  positionDisplay: p.position ? (p.position === parseInt(p.position) ? `${p.position}` : p.position) : null,
-                  rounds: p.rounds.map((r, i) => r !== null ? r : newScores[match]?.rounds?.[i] || null),
+                  position: p.position || existing.position,
+                  rounds: p.rounds.map(function(rv, ri) { return rv !== null ? rv : existingRounds[ri] || null; }),
                   score: p.score,
                   today: p.today,
                   thru: p.thru,
-                  cut: p.cut || newScores[match]?.cut
+                  cut: p.cut || existing.cut
                 };
               }
-            });
-            
+            }
             setScores(newScores);
             saveToFirebase({ scores: newScores });
-            
-            // Auto-set champion when tournament is complete (final format only)
             if (format === 'final') {
-              const winner = parsed.find(p => p.position === 1);
+              var winner = null;
+              for (var w = 0; w < parsed.length; w++) {
+                if (parsed[w].position === 1) { winner = parsed[w]; break; }
+              }
               if (winner && winner.name !== champion) {
                 setChampion(winner.name);
                 saveToFirebase({ champion: winner.name });
               }
             }
           }
-          
-        } catch (err) {
-          setFetchError('Could not fetch scores. Check your Sheet URL.');
+        } catch(err) {
+          setFetchError('Could not fetch scores from ESPN.');
           console.error(err);
         }
-        
         setIsFetching(false);
       };
       
       // Auto-fetch every 2 minutes
       useEffect(() => {
-        if (sheetUrl && Object.values(teams).some(t => t.length > 0)) {
+        if (Object.values(teams).some(t => t.length > 0)) {
           fetchLiveScores();
           const interval = setInterval(fetchLiveScores, 120000);
           return () => clearInterval(interval);
         }
-      }, [sheetUrl, Object.values(teams).flat().length]);
+      }, [Object.values(teams).flat().length]);
 
       // Smart parser for ESPN copy/pastes
       const parseGolferList = (rawText) => {

@@ -109,7 +109,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div class="logo-ball">⚽</div>
       <div>
         <div class="logo-text">World Cup Droppers</div>
-        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.4</span></div>
+        <div class="logo-sub">USA · Canada · Mexico · 2026 · <span id="version">v2.5</span></div>
       </div>
     </div>
     <nav>
@@ -581,7 +581,7 @@ function renderMatches(){
     const label=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
     const rows=byDate[date].map(m=>{
       const st=m.status.toUpperCase();
-      const isLive=['IN_PROGRESS','HALFTIME','END_PERIOD'].some(s=>st.includes(s));
+      const isLive=['IN_PROGRESS','HALFTIME','END_PERIOD','FIRST_HALF','SECOND_HALF'].some(s=>st.includes(s));
       const isFT=['FULL_TIME','STATUS_FINAL','FINAL'].some(s=>st.includes(s));
       let scoreHTML;
       if(isLive){

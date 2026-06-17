@@ -35,131 +35,126 @@
     const ENTRY_FEE = 70;
     const ROSTER_SIZE = 8;
     
-    // Preloaded field sorted by betting odds (source: golfodds.com)
+    // Preloaded field sorted by betting odds (source: DraftKings, 2026 U.S. Open at Shinnecock Hills)
     const PRELOADED_FIELD = [
-      { name: "Scottie Scheffler", odds: "+450" },
-      { name: "Rory McIlroy", odds: "+1600" },
-      { name: "Collin Morikawa", odds: "+1800" },
-      { name: "Si Woo Kim", odds: "+2000" },
+      { name: "Scottie Scheffler", odds: "+460" },
+      { name: "Rory McIlroy", odds: "+950" },
+      { name: "Jon Rahm", odds: "+1025" },
+      { name: "Xander Schauffele", odds: "+1850" },
+      { name: "Cameron Young", odds: "+2000" },
+      { name: "Matt Fitzpatrick", odds: "+2150" },
       { name: "Tommy Fleetwood", odds: "+2500" },
-      { name: "Xander Schauffele", odds: "+2500" },
-      { name: "Ludvig Aberg", odds: "+2500" },
-      { name: "Russell Henley", odds: "+2500" },
-      { name: "Hideki Matsuyama", odds: "+2500" },
-      { name: "Cameron Young", odds: "+3000" },
-      { name: "Matt Fitzpatrick", odds: "+3000" },
-      { name: "Viktor Hovland", odds: "+3000" },
-      { name: "Min Woo Lee", odds: "+3500" },
-      { name: "Sepp Straka", odds: "+4000" },
-      { name: "Jake Knapp", odds: "+4500" },
-      { name: "Akshay Bhatia", odds: "+4500" },
-      { name: "Chris Gotterup", odds: "+5000" },
-      { name: "Robert MacIntyre", odds: "+5000" },
-      { name: "Harris English", odds: "+5000" },
-      { name: "Rickie Fowler", odds: "+5000" },
-      { name: "Shane Lowry", odds: "+5000" },
-      { name: "Jacob Bridgeman", odds: "+5000" },
-      { name: "Daniel Berger", odds: "+5500" },
-      { name: "Maverick McNealy", odds: "+5500" },
-      { name: "Kurt Kitayama", odds: "+5500" },
-      { name: "Ben Griffin", odds: "+6000" },
-      { name: "Adam Scott", odds: "+6000" },
-      { name: "Brooks Koepka", odds: "+6500" },
-      { name: "Patrick Cantlay", odds: "+6500" },
-      { name: "Jordan Spieth", odds: "+6500" },
-      { name: "Ryan Gerard", odds: "+6500" },
-      { name: "Alex Noren", odds: "+6500" },
-      { name: "Corey Conners", odds: "+6500" },
-      { name: "Sam Burns", odds: "+7000" },
-      { name: "Justin Rose", odds: "+7000" },
-      { name: "Nicolai Hojgaard", odds: "+8000" },
-      { name: "Harry Hall", odds: "+8000" },
-      { name: "Aaron Rai", odds: "+8000" },
-      { name: "J.J. Spaun", odds: "+8000" },
-      { name: "Sahith Theegala", odds: "+8000" },
-      { name: "Jason Day", odds: "+9000" },
-      { name: "Pierceson Coody", odds: "+9000" },
-      { name: "Davis Thompson", odds: "+9000" },
-      { name: "Christiaan Bezuidenhout", odds: "+9000" },
-      { name: "Justin Thomas", odds: "+10000" },
-      { name: "Rasmus Hojgaard", odds: "+10000" },
-      { name: "Keegan Bradley", odds: "+10000" },
-      { name: "Michael Thorbjornsen", odds: "+10000" },
-      { name: "Taylor Pendrith", odds: "+10000" },
-      { name: "Keith Mitchell", odds: "+10000" },
-      { name: "Nick Taylor", odds: "+10000" },
-      { name: "Nico Echavarria", odds: "+12500" },
-      { name: "Ricky Castillo", odds: "+12500" },
-      { name: "Matt McCarty", odds: "+12500" },
-      { name: "Sam Stevens", odds: "+12500" },
-      { name: "Ryo Hisatsune", odds: "+12500" },
-      { name: "Wyndham Clark", odds: "+12500" },
-      { name: "Ryan Fox", odds: "+12500" },
-      { name: "Thorbjorn Olesen", odds: "+15000" },
-      { name: "Max McGreevy", odds: "+15000" },
-      { name: "Joel Dahmen", odds: "+15000" },
-      { name: "Kristoffer Reitan", odds: "+15000" },
-      { name: "Marco Penge", odds: "+15000" },
-      { name: "Max Greyserman", odds: "+15000" },
-      { name: "Alex Smalley", odds: "+15000" },
-      { name: "Max Homa", odds: "+15000" },
-      { name: "Tony Finau", odds: "+15000" },
-      { name: "Sungjae Im", odds: "+15000" },
-      { name: "Rico Hoey", odds: "+20000" },
-      { name: "Brian Harman", odds: "+20000" },
-      { name: "Johnny Keefer", odds: "+20000" },
-      { name: "Michael Brennan", odds: "+20000" },
-      { name: "Bud Cauley", odds: "+20000" },
-      { name: "Jordan Smith", odds: "+20000" },
-      { name: "J.T. Poston", odds: "+20000" },
-      { name: "Patrick Rodgers", odds: "+20000" },
-      { name: "Haotong Li", odds: "+20000" },
-      { name: "Denny McCarthy", odds: "+20000" },
-      { name: "Mackenzie Hughes", odds: "+20000" },
-      { name: "Mac Meissner", odds: "+20000" },
-      { name: "Lucas Glover", odds: "+25000" },
-      { name: "Garrick Higgo", odds: "+25000" },
-      { name: "Kevin Yu", odds: "+25000" },
-      { name: "Michael Kim", odds: "+25000" },
-      { name: "Taylor Moore", odds: "+25000" },
-      { name: "Andrew Novak", odds: "+25000" },
-      { name: "Austin Smotherman", odds: "+25000" },
-      { name: "Tom Hoge", odds: "+25000" },
-      { name: "Seamus Power", odds: "+30000" },
-      { name: "Stephan Jaeger", odds: "+30000" },
-      { name: "Chris Kirk", odds: "+30000" },
-      { name: "Sami Valimaki", odds: "+30000" },
-      { name: "Emiliano Grillo", odds: "+30000" },
-      { name: "Aldrich Potgieter", odds: "+30000" },
-      { name: "Zecheng Dou", odds: "+30000" },
-      { name: "S.H. Kim", odds: "+30000" },
-      { name: "Lee Hodges", odds: "+30000" },
-      { name: "Eric Cole", odds: "+30000" },
-      { name: "Vince Whaley", odds: "+30000" },
-      { name: "Matti Schmid", odds: "+30000" },
-      { name: "Kevin Roy", odds: "+30000" },
-      { name: "Chad Ramey", odds: "+30000" },
-      { name: "Takumi Kanaya", odds: "+40000" },
-      { name: "Jhonattan Vegas", odds: "+40000" },
-      { name: "Mark Hubbard", odds: "+40000" },
-      { name: "William Mouw", odds: "+40000" },
-      { name: "Gary Woodland", odds: "+50000" },
-      { name: "Chandler Phillips", odds: "+50000" },
-      { name: "Sudarshan Yellamaraju", odds: "+50000" },
-      { name: "Zach Bauchou", odds: "+50000" },
-      { name: "Steven Fisk", odds: "+50000" },
-      { name: "A.J. Ewart", odds: "+50000" },
-      { name: "Andrew Putnam", odds: "+50000" },
-      { name: "Davis Riley", odds: "+50000" },
-      { name: "Patton Kizzire", odds: "+60000" },
-      { name: "Matthieu Pavon", odds: "+60000" },
-      { name: "Karl Vilips", odds: "+60000" },
-      { name: "Erik van Rooyen", odds: "+60000" },
-      { name: "Cam Davis", odds: "+100000" },
-      { name: "Adam Schenk", odds: "+100000" },
-      { name: "Danny Walker", odds: "+100000" },
-      { name: "Joe Highsmith", odds: "+100000" },
-      { name: "Brian Campbell", odds: "+100000" },
+      { name: "Ludvig Aberg", odds: "+2600" },
+      { name: "Bryson DeChambeau", odds: "+2700" },
+      { name: "Brooks Koepka", odds: "+3300" },
+      { name: "Collin Morikawa", odds: "+3500" },
+      { name: "Wyndham Clark", odds: "+3700" },
+      { name: "Russell Henley", odds: "+3700" },
+      { name: "Sam Burns", odds: "+3800" },
+      { name: "Si Woo Kim", odds: "+3900" },
+      { name: "Chris Gotterup", odds: "+4400" },
+      { name: "Justin Thomas", odds: "+4400" },
+      { name: "Tyrrell Hatton", odds: "+4600" },
+      { name: "Patrick Cantlay", odds: "+4600" },
+      { name: "Patrick Reed", odds: "+4900" },
+      { name: "Justin Rose", odds: "+5200" },
+      { name: "Viktor Hovland", odds: "+5400" },
+      { name: "J.J. Spaun", odds: "+6100" },
+      { name: "Hideki Matsuyama", odds: "+6500" },
+      { name: "Robert MacIntyre", odds: "+6600" },
+      { name: "Jordan Spieth", odds: "+6900" },
+      { name: "Joaquin Niemann", odds: "+6900" },
+      { name: "Min Woo Lee", odds: "+7200" },
+      { name: "Ben Griffin", odds: "+7400" },
+      { name: "Maverick McNealy", odds: "+7600" },
+      { name: "Adam Scott", odds: "+7600" },
+      { name: "Kurt Kitayama", odds: "+7800" },
+      { name: "Shane Lowry", odds: "+8200" },
+      { name: "Harris English", odds: "+8800" },
+      { name: "Jake Knapp", odds: "+9400" },
+      { name: "David Puig", odds: "+9600" },
+      { name: "Bud Cauley", odds: "+9600" },
+      { name: "Alex Smalley", odds: "+10500" },
+      { name: "Sepp Straka", odds: "+10500" },
+      { name: "Alex Fitzpatrick", odds: "+11000" },
+      { name: "Aaron Rai", odds: "+11000" },
+      { name: "Ryan Gerard", odds: "+11000" },
+      { name: "Rickie Fowler", odds: "+11000" },
+      { name: "Kristoffer Reitan", odds: "+11500" },
+      { name: "J.T. Poston", odds: "+11500" },
+      { name: "Gary Woodland", odds: "+11500" },
+      { name: "Jacob Bridgeman", odds: "+13000" },
+      { name: "Jason Day", odds: "+13000" },
+      { name: "Nicolai Hojgaard", odds: "+13000" },
+      { name: "Sudarshan Yellamaraju", odds: "+13500" },
+      { name: "Akshay Bhatia", odds: "+14000" },
+      { name: "Keegan Bradley", odds: "+14500" },
+      { name: "Keith Mitchell", odds: "+14500" },
+      { name: "Alex Noren", odds: "+15000" },
+      { name: "Cameron Smith", odds: "+15000" },
+      { name: "Jackson Koivun", odds: "+16000" },
+      { name: "Dustin Johnson", odds: "+17000" },
+      { name: "Sahith Theegala", odds: "+17000" },
+      { name: "Harry Hall", odds: "+18000" },
+      { name: "Tom Kim", odds: "+18500" },
+      { name: "Pierceson Coody", odds: "+19000" },
+      { name: "Ryan Fox", odds: "+19000" },
+      { name: "Daniel Berger", odds: "+21000" },
+      { name: "Corey Conners", odds: "+21000" },
+      { name: "Sungjae Im", odds: "+21000" },
+      { name: "Brian Harman", odds: "+23000" },
+      { name: "Jackson Suber", odds: "+23000" },
+      { name: "Nick Taylor", odds: "+23000" },
+      { name: "Ryo Hisatsune", odds: "+24000" },
+      { name: "Davis Thompson", odds: "+24000" },
+      { name: "Lucas Herbert", odds: "+26000" },
+      { name: "Jayden Schaper", odds: "+26000" },
+      { name: "Sam Stevens", odds: "+28000" },
+      { name: "Matt McCarty", odds: "+29000" },
+      { name: "Carlos Ortiz", odds: "+29000" },
+      { name: "Max Greyserman", odds: "+30000" },
+      { name: "Andrew Novak", odds: "+31000" },
+      { name: "Michael Kim", odds: "+32000" },
+      { name: "Benjamin James", odds: "+33000" },
+      { name: "Andrew Putnam", odds: "+34000" },
+      { name: "John Keefer", odds: "+40000" },
+      { name: "William Mouw", odds: "+42000" },
+      { name: "Michael Brennan", odds: "+43000" },
+      { name: "Adrien Dumont De Chassart", odds: "+44000" },
+      { name: "Preston Stout", odds: "+44000" },
+      { name: "Patrick Rodgers", odds: "+45000" },
+      { name: "Nico Echavarria", odds: "+48000" },
+      { name: "Max McGreevy", odds: "+48000" },
+      { name: "Chris Kirk", odds: "+50000" },
+      { name: "Matthias Schmid", odds: "+50000" },
+      { name: "Emiliano Grillo", odds: "+52500" },
+      { name: "Nathan Kimsey", odds: "+55000" },
+      { name: "John Parry", odds: "+55000" },
+      { name: "Billy Horschel", odds: "+57500" },
+      { name: "Ben Kohles", odds: "+57500" },
+      { name: "Chandler Phillips", odds: "+67500" },
+      { name: "Neal Shipley", odds: "+67500" },
+      { name: "Cooper Dossey", odds: "+72500" },
+      { name: "Laurie Canter", odds: "+82500" },
+      { name: "Kevin Roy", odds: "+87500" },
+      { name: "Adrien Saddier", odds: "+87500" },
+      { name: "Ugo Coussaud", odds: "+90000" },
+      { name: "Jimmy Stanger", odds: "+95000" },
+      { name: "Matthew Jordan", odds: "+115000" },
+      { name: "Zac Blair", odds: "+125000" },
+      { name: "Caleb Surratt", odds: "+130000" },
+      { name: "Cole Hammer", odds: "+140000" },
+      { name: "Alejandro Tosti", odds: "+150000" },
+      { name: "Padraig Harrington", odds: "+160000" },
+      { name: "Dylan Wu", odds: "+180000" },
+      { name: "Taylor Montgomery", odds: "+200000" },
+      { name: "Niklas Norgaard", odds: "+200000" },
+      { name: "Ben Silverman", odds: "+200000" },
+      { name: "Peter Uihlein", odds: "+225000" },
+      { name: "Carl Yuan", odds: "+250000" },
+      { name: "Nick Hardy", odds: "+250000" },
+      { name: "Arni Sveinsson", odds: "+275000" },
+      { name: "Ethan Fang", odds: "+275000" },
     ];
     
     // Helper function to normalize names for matching (removes diacritics)
@@ -219,7 +214,7 @@
       });
       const [scores, setScores] = useState({});
       const [currentRound, setCurrentRound] = useState(0);
-      const [tournamentName, setTournamentName] = useState('THE PLAYERS Championship 2026');
+      const [tournamentName, setTournamentName] = useState('2026 U.S. Open');
       const [view, setView] = useState('dashboard');
       const [champion, setChampion] = useState(null);
       const [connected, setConnected] = useState(false);
@@ -235,15 +230,14 @@
       const [parseStatus, setParseStatus] = useState('');
       const [editingTeam, setEditingTeam] = useState(null); // Track which team is being edited
       
-      // Google Sheets integration for live ESPN scores
-      const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ121Dx0jInZVi40FINWYApShk7Hy1IQU316o3zFhNaebyRVOf4Zb701Y8To6T6nrSV8FA124Mfc7DA/pub?output=csv');
+      // ESPN API integration for live scores
       const [liveScores, setLiveScores] = useState([]);
       const [lastFetch, setLastFetch] = useState(null);
       const [fetchError, setFetchError] = useState('');
       const [isFetching, setIsFetching] = useState(false);
       const [cutLine, setCutLine] = useState(null);
-      const [tournamentRound, setTournamentRound] = useState(0); // 0=pre, 1-4=rounds
-      const [tournamentHistory, setTournamentHistory] = useState([]); // Past tournament results
+      const [tournamentRound, setTournamentRound] = useState(0);
+      const [tournamentHistory, setTournamentHistory] = useState([]);
       
       // Track if we're currently writing to prevent loops
       const isWriting = useRef(false);
@@ -310,218 +304,70 @@
         isWriting.current = false;
       };
 
-      // Fetch scores from Google Sheet
+      // Fetch scores from ESPN API
       const fetchLiveScores = async () => {
-        if (!sheetUrl) {
-          setFetchError('No Google Sheet URL configured');
-          return;
-        }
-        
         setIsFetching(true);
         setFetchError('');
         
         try {
-          // Try direct fetch first, then proxies as fallback
-          const corsProxies = [
-            (url) => url,
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-          ];
+          const url = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga';
+          const response = await fetch(url);
+          if (!response.ok) throw new Error('ESPN API request failed');
           
-          let response;
-          for (const proxyFn of corsProxies) {
-            try {
-              response = await fetch(proxyFn(sheetUrl));
-              if (response.ok) break;
-            } catch (e) {
-              continue;
-            }
+          const data = await response.json();
+          const event = data?.events?.[0];
+          if (!event) throw new Error('No event found');
+
+          // Update tournament name from ESPN
+          const espnName = event.name;
+          if (espnName && espnName !== tournamentName) {
+            setTournamentName(espnName);
+            saveToFirebase({ tournamentName: espnName });
           }
+
+          const competitors = event?.competitions?.[0]?.competitors || [];
           
-          if (!response || !response.ok) {
-            throw new Error('All fetch attempts failed');
-          }
-          
-          const text = await response.text();
-          const rows = text.split('\n').map(row => {
-            const cells = [];
-            let current = '';
-            let inQuotes = false;
-            for (let char of row) {
-              if (char === '"') {
-                inQuotes = !inQuotes;
-              } else if (char === ',' && !inQuotes) {
-                cells.push(current.trim().replace(/"/g, ''));
-                current = '';
-              } else {
-                current += char;
-              }
-            }
-            cells.push(current.trim().replace(/"/g, ''));
-            return cells;
-          });
-          
-          // Check for projected cut line
-          let foundCutLine = null;
-          for (let i = 0; i < rows.length; i++) {
-            const rowText = rows[i].join(' ').toLowerCase();
-            if (rowText.includes('projected cut') || rowText.includes('cut line')) {
-              // Try to extract the cut number (e.g., "+2", "E", "-1")
-              // Handle formats like "Projected Cut+1" or "Projected Cut +1" or "Projected Cut: E"
-              const match = rowText.match(/cut\s*[:\s]*([+-]?\d+|e)/i);
-              if (match) {
-                foundCutLine = match[1].toUpperCase();
-                // Add + sign if it's a positive number without sign
-                if (/^\d+$/.test(foundCutLine)) {
-                  foundCutLine = '+' + foundCutLine;
-                }
-              }
-              break;
-            }
-          }
-          setCutLine(foundCutLine);
-          
-          // Auto-detect format based on column structure
-          // In-progress: B=Pos, C=seed, D=Player, E=Score, F=Today, G=Thru, H=R1, I=R2, J=R3, K=R4
-          // Final: B=Pos, C=Player, D=Score, E=R1, F=R2, G=R3, H=R4, I=TOT, J=Earnings, K=FedEx
-          const detectFormat = () => {
-            const header = rows[0];
-            
-            // Check header row for format clues
-            const headerStr = (header || []).join(' ').toUpperCase();
-            if (headerStr.includes('EARNINGS') || headerStr.includes('FEDEX')) {
-              return 'final';
-            }
-            if (headerStr.includes('TODAY') || headerStr.includes('THRU')) {
-              return 'in-progress';
-            }
-            
-            // Fallback: check if index 1 looks like names (in-progress)
-            for (let i = 1; i < Math.min(rows.length, 10); i++) {
-              const col1 = rows[i]?.[1]; // PLAYER in in-progress
-              const col4 = rows[i]?.[4]; // R1 in final format (60-90 range)
-              
-              if (col4 && !isNaN(parseInt(col4)) && parseInt(col4) >= 60 && parseInt(col4) <= 90) {
-                return 'final';
-              }
-              if (col1 && col1.includes(' ') && /[a-zA-Z]{2,}/.test(col1)) {
-                return 'in-progress';
-              }
-            }
-            return 'in-progress';
-          };
-          
-          const format = detectFormat();
-          
-          // Detect which round we're in based on day of week
-          // Thursday = R1, Friday = R2, Saturday = R3, Sunday = R4
-          // For final format, set to 4 (tournament complete)
-          let detectedRound = 1;
-          if (format === 'final') {
-            detectedRound = 4; // Tournament complete
-          } else {
-            const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon, ..., 4=Thu, 5=Fri, 6=Sat
-            if (dayOfWeek === 4) detectedRound = 1;      // Thursday = R1
-            else if (dayOfWeek === 5) detectedRound = 2; // Friday = R2
-            else if (dayOfWeek === 6) detectedRound = 3; // Saturday = R3
-            else if (dayOfWeek === 0) detectedRound = 4; // Sunday = R4
-            else detectedRound = 4; // Default to R4 for Mon-Wed (tournament over)
-          }
-          
+          // Detect round
+          const status = event?.competitions?.[0]?.status;
+          const detectedRound = status?.period || 1;
           setTournamentRound(detectedRound);
-          
-          const parsed = [];
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (row.length < 3) continue;
-            
-            let pos, name, score, today, thru, r1, r2, r3, r4, isCut;
-            
-            if (format === 'final') {
-              // Final format: 0=blank, 1=Pos, 2=Player, 3=Score, 4=R1, 5=R2, 6=R3, 7=R4
-              const rawPos = row[1]?.trim();
-              pos = rawPos?.replace(/[T\s"]/g, '');
-              name = row[2]?.trim();
-              score = row[3]?.trim();
-              today = null;
-              thru = 'F';
-              r1 = row[4];
-              r2 = row[5];
-              r3 = row[6];
-              r4 = row[7];
-              
-              // Check if player missed cut - in final format, cut players have:
-              // - POS = "-" or "CUT" or "MC"
-              // - R3/R4 = "--" or empty
-              const r3Val = String(r3 || '').trim();
-              const r4Val = String(r4 || '').trim();
-              const hasNoWeekendScores = r3Val === '--' || r3Val === '' || r4Val === '--' || r4Val === '';
-              isCut = rawPos === '-' || 
-                      rawPos?.toUpperCase() === 'CUT' || 
-                      rawPos?.toUpperCase() === 'MC' ||
-                      (hasNoWeekendScores && r1 && r2); // Has R1/R2 but no R3/R4
-              
-              // Skip header rows
-              if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
-            } else {
-              // Thursday (R1): 0=blank, 1=Pos, 2=Player, 3=Score, 4=Today, 5=Thru, 6=R1...
-              // Friday-Sunday (R2-R4): 0=blank, 1=Pos, 2=blank, 3=Player, 4=Score, 5=Today, 6=Thru, 7=R1, 8=R2, 9=R3, 10=R4
-              const isThursday = new Date().getDay() === 4;
-              const rawPos = row[1]?.trim();
-              pos = rawPos?.replace(/[T\s"]/g, '');
-              if (isThursday) {
-                name = row[2]?.trim();
-                score = row[3]?.trim();
-                today = row[4]?.trim();
-                thru = row[5]?.trim()?.replace(/\*/g, '');
-                r1 = row[6];
-                r2 = row[7];
-                r3 = row[8];
-                r4 = row[9];
-              } else {
-                name = row[3]?.trim();
-                score = row[4]?.trim();
-                today = row[5]?.trim();
-                thru = row[6]?.trim()?.replace(/\*/g, '');
-                r1 = row[7];
-                r2 = row[8];
-                r3 = row[9];
-                r4 = row[10];
-              }
-              
-              // Check if player missed cut
-              isCut = rawPos?.toUpperCase() === 'CUT' || 
-                      rawPos?.toUpperCase() === 'MC' ||
-                      name?.toUpperCase().includes('CUT');
-              
-              // Skip header rows and cut line rows
-              if (rawPos?.toUpperCase() === 'POS' || name?.toUpperCase() === 'PLAYER') continue;
-              if (row.join(' ').toLowerCase().includes('projected cut')) continue;
-            }
-            
-            if (!name || name.length < 2) continue;
-            if (['PLAYER', 'NAME', 'GOLFER', 'POS', ''].includes(name.toUpperCase())) continue;
-            
-            const position = parseInt(pos) || null;
-            const rounds = [r1, r2, r3, r4].map(r => {
-              const n = parseInt(r);
-              return isNaN(n) ? null : n;
-            });
-            
-            parsed.push({ 
-              name, 
-              position, 
-              rounds, 
-              score: score || null,
-              today: today || null, 
-              thru: thru || null,
-              cut: isCut
-            });
+
+          // Detect format (final vs in-progress)
+          const isComplete = status?.type?.completed === true;
+          const format = isComplete ? 'final' : 'in-progress';
+
+          // Parse cut line if available
+          const cutInfo = event?.competitions?.[0]?.situation?.cutLine;
+          if (cutInfo !== undefined && cutInfo !== null) {
+            const cutVal = cutInfo > 0 ? `+${cutInfo}` : cutInfo === 0 ? 'E' : `${cutInfo}`;
+            setCutLine(cutVal);
           }
-          
+
+          const parsed = competitors.map(comp => {
+            const name = comp.athlete?.displayName || '';
+            const statusType = comp.status?.type?.name || '';
+            const isCut = statusType === 'cut' || comp.status?.displayValue?.toUpperCase() === 'CUT' || comp.status?.type?.id === 'cut';
+            const isWD = statusType === 'wd' || comp.status?.displayValue?.toUpperCase() === 'WD';
+            
+            const pos = comp.status?.position?.id;
+            const position = pos ? parseInt(pos) : null;
+            
+            const linescores = comp.linescores || [];
+            const rounds = [0,1,2,3].map(i => {
+              const val = linescores[i]?.value;
+              return (val !== undefined && val !== null && !isNaN(val)) ? parseInt(val) : null;
+            });
+
+            const score = comp.status?.displayValue || null;
+            const today = comp.status?.period === detectedRound ? (linescores[detectedRound-1]?.displayValue || null) : null;
+            const thru = comp.status?.thru !== undefined ? String(comp.status.thru) : null;
+
+            return { name, position, rounds, score, today, thru, cut: isCut || isWD };
+          }).filter(p => p.name);
+
           setLiveScores(parsed);
           setLastFetch(new Date());
-          
+
           // Auto-update scores for drafted golfers
           if (parsed.length > 0) {
             const allGolfers = Object.values(teams).flat();
@@ -529,12 +375,10 @@
             
             parsed.forEach(p => {
               const match = allGolfers.find(g => namesMatch(g, p.name));
-              
               if (match) {
                 newScores[match] = {
                   ...newScores[match],
                   position: p.position || newScores[match]?.position,
-                  positionDisplay: p.position ? (p.position === parseInt(p.position) ? `${p.position}` : p.position) : null,
                   rounds: p.rounds.map((r, i) => r !== null ? r : newScores[match]?.rounds?.[i] || null),
                   score: p.score,
                   today: p.today,
@@ -546,8 +390,8 @@
             
             setScores(newScores);
             saveToFirebase({ scores: newScores });
-            
-            // Auto-set champion when tournament is complete (final format only)
+
+            // Auto-set champion when tournament is complete
             if (format === 'final') {
               const winner = parsed.find(p => p.position === 1);
               if (winner && winner.name !== champion) {
@@ -556,23 +400,24 @@
               }
             }
           }
-          
+
         } catch (err) {
-          setFetchError('Could not fetch scores. Check your Sheet URL.');
+          setFetchError('Could not fetch scores from ESPN.');
           console.error(err);
         }
         
         setIsFetching(false);
       };
+
       
       // Auto-fetch every 2 minutes
       useEffect(() => {
-        if (sheetUrl && Object.values(teams).some(t => t.length > 0)) {
+        if (Object.values(teams).some(t => t.length > 0)) {
           fetchLiveScores();
           const interval = setInterval(fetchLiveScores, 120000);
           return () => clearInterval(interval);
         }
-      }, [sheetUrl, Object.values(teams).flat().length]);
+      }, [Object.values(teams).flat().length]);
 
       // Smart parser for ESPN copy/pastes
       const parseGolferList = (rawText) => {
@@ -645,98 +490,36 @@
         }
       };
 
-      // Load golfers from Google Sheet
+      // Load golfers from ESPN API
       const loadGolfersFromSheet = async () => {
-        if (!sheetUrl) {
-          alert('Please set up your Google Sheet URL in Settings first!');
-          setView('settings');
-          return;
-        }
-        
         setIsFetching(true);
         
         try {
-          const corsProxies = [
-            (url) => url,
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-          ];
+          const url = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga';
+          const response = await fetch(url);
+          if (!response.ok) throw new Error('ESPN API request failed');
           
-          let response;
-          for (const proxyFn of corsProxies) {
-            try {
-              response = await fetch(proxyFn(sheetUrl));
-              if (response.ok) break;
-            } catch (e) { continue; }
+          const data = await response.json();
+          const competitors = data?.events?.[0]?.competitions?.[0]?.competitors || [];
+          
+          if (competitors.length === 0) {
+            alert('No players found in ESPN data. The tournament field may not be available yet.');
+            setIsFetching(false);
+            return;
           }
-          
-          if (!response || !response.ok) throw new Error('Failed to fetch');
-          
-          const text = await response.text();
-          const rows = text.split('\n').map(row => {
-            const cells = [];
-            let current = '';
-            let inQuotes = false;
-            for (let char of row) {
-              if (char === '"') { inQuotes = !inQuotes; }
-              else if (char === ',' && !inQuotes) { cells.push(current.trim().replace(/"/g, '')); current = ''; }
-              else { current += char; }
-            }
-            cells.push(current.trim().replace(/"/g, ''));
-            return cells;
-          });
-          
-          // Auto-detect format
-          const detectFormat = () => {
-            for (let i = 1; i < Math.min(rows.length, 5); i++) {
-              const colB = rows[i]?.[1];
-              const colC = rows[i]?.[2];
-              const colH = rows[i]?.[7];
-              
-              // Friday-Sunday: Column H has round scores (60-90 range)
-              if (colH && !isNaN(parseInt(colH)) && parseInt(colH) >= 60 && parseInt(colH) <= 90) {
-                return 'friday-sunday';
-              }
-              
-              // Thursday: Column B is position (number), Column C is name
-              if (colB && /^T?\d+$/.test(colB.trim()) && colC && colC.includes(' ') && /[a-zA-Z]{2,}/.test(colC)) {
-                return 'thursday';
-              }
-              
-              // Pre-tournament: Column B is name
-              if (colB && colB.includes(' ') && /[a-zA-Z]{2,}/.test(colB) && !/^\d+$/.test(colB.trim())) {
-                return 'pre-tournament';
-              }
-            }
-            return 'friday-sunday';
-          };
-          
-          const format = detectFormat();
-          // Pre-tournament: B=1, Thursday: C=2, Friday-Sunday: D=3
-          const nameColumn = format === 'pre-tournament' ? 1 : format === 'thursday' ? 2 : 3;
-          
-          const names = [];
-          for (let i = 1; i < rows.length; i++) {
-            let name = rows[i]?.[nameColumn];
-            if (name && name.length > 2) {
-              if (['PLAYER', 'NAME', 'GOLFER', ''].includes(name.toUpperCase())) continue;
-              name = name.trim().split(' ').map(p => {
-                if (p.toLowerCase().startsWith('mc')) return 'Mc' + p.charAt(2).toUpperCase() + p.slice(3).toLowerCase();
-                if (p.toLowerCase().startsWith("o'")) return "O'" + p.charAt(2).toUpperCase() + p.slice(3).toLowerCase();
-                return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
-              }).join(' ');
-              if (!names.includes(name)) names.push(name);
-            }
-          }
-          
+
+          const names = competitors
+            .map(c => c.athlete?.displayName)
+            .filter(n => n && n.length > 2);
+
           if (names.length > 0) {
             setGolferInput(names.join('\n'));
-            setParseStatus(`✓ Loaded ${names.length} golfers from Google Sheet`);
+            setParseStatus(`✓ Loaded ${names.length} golfers from ESPN`);
           } else {
-            alert('Could not find golfer names.');
+            alert('Could not find golfer names from ESPN.');
           }
         } catch (err) {
-          alert('Error loading from Google Sheet.');
+          alert('Error loading from ESPN. Check your connection.');
           console.error(err);
         }
         setIsFetching(false);
@@ -1130,7 +913,7 @@
                 disabled={isFetching}
                 className="w-full mb-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all disabled:opacity-50 text-sm"
               >
-                {isFetching ? '⏳ Loading...' : '📡 Or Load from Google Sheet'}
+                {isFetching ? '⏳ Loading...' : '📡 Load Field from ESPN'}
               </button>
               
               <p className="text-sm text-gray-500 mb-2">Or paste manually:</p>
@@ -1606,7 +1389,7 @@
         const [replacingGolfer, setReplacingGolfer] = useState(null); // {player, golfer} being replaced
         
         // Helper to find score data with fuzzy name matching
-        // Check both scores (Firebase) and liveScores (fresh from sheet)
+        // Check both scores (Firebase) and liveScores (fresh from ESPN)
         const getGolferScore = (golferName) => {
           const fromScores = getGolferScoreFromScores(scores, golferName);
           // Also check liveScores for most up-to-date round data

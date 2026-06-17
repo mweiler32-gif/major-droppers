@@ -611,96 +611,26 @@
 
       // Load golfers from Google Sheet
       const loadGolfersFromSheet = async () => {
-        if (!sheetUrl) {
-          alert('Please set up your Google Sheet URL in Settings first!');
-          setView('settings');
-          return;
-        }
-        
         setIsFetching(true);
-        
         try {
-          const corsProxies = [
-            (url) => url,
-            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-          ];
-          
-          let response;
-          for (const proxyFn of corsProxies) {
-            try {
-              response = await fetch(proxyFn(sheetUrl));
-              if (response.ok) break;
-            } catch (e) { continue; }
-          }
-          
-          if (!response || !response.ok) throw new Error('Failed to fetch');
-          
-          const text = await response.text();
-          const rows = text.split('\n').map(row => {
-            const cells = [];
-            let current = '';
-            let inQuotes = false;
-            for (let char of row) {
-              if (char === '"') { inQuotes = !inQuotes; }
-              else if (char === ',' && !inQuotes) { cells.push(current.trim().replace(/"/g, '')); current = ''; }
-              else { current += char; }
-            }
-            cells.push(current.trim().replace(/"/g, ''));
-            return cells;
-          });
-          
-          // Auto-detect format
-          const detectFormat = () => {
-            for (let i = 1; i < Math.min(rows.length, 5); i++) {
-              const colB = rows[i]?.[1];
-              const colC = rows[i]?.[2];
-              const colH = rows[i]?.[7];
-              
-              // Friday-Sunday: Column H has round scores (60-90 range)
-              if (colH && !isNaN(parseInt(colH)) && parseInt(colH) >= 60 && parseInt(colH) <= 90) {
-                return 'friday-sunday';
-              }
-              
-              // Thursday: Column B is position (number), Column C is name
-              if (colB && /^T?\d+$/.test(colB.trim()) && colC && colC.includes(' ') && /[a-zA-Z]{2,}/.test(colC)) {
-                return 'thursday';
-              }
-              
-              // Pre-tournament: Column B is name
-              if (colB && colB.includes(' ') && /[a-zA-Z]{2,}/.test(colB) && !/^\d+$/.test(colB.trim())) {
-                return 'pre-tournament';
-              }
-            }
-            return 'friday-sunday';
-          };
-          
-          const format = detectFormat();
-          // Pre-tournament: B=1, Thursday: C=2, Friday-Sunday: D=3
-          const nameColumn = format === 'pre-tournament' ? 1 : format === 'thursday' ? 2 : 3;
-          
+          const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga');
+          if (!response.ok) throw new Error('ESPN API failed');
+          const data = await response.json();
+          const event = data && data.events && data.events[0];
+          const competitors = (event && event.competitions && event.competitions[0] && event.competitions[0].competitors) || [];
           const names = [];
-          for (let i = 1; i < rows.length; i++) {
-            let name = rows[i]?.[nameColumn];
-            if (name && name.length > 2) {
-              if (['PLAYER', 'NAME', 'GOLFER', ''].includes(name.toUpperCase())) continue;
-              name = name.trim().split(' ').map(p => {
-                if (p.toLowerCase().startsWith('mc')) return 'Mc' + p.charAt(2).toUpperCase() + p.slice(3).toLowerCase();
-                if (p.toLowerCase().startsWith("o'")) return "O'" + p.charAt(2).toUpperCase() + p.slice(3).toLowerCase();
-                return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
-              }).join(' ');
-              if (!names.includes(name)) names.push(name);
-            }
+          for (var i = 0; i < competitors.length; i++) {
+            var n = competitors[i].athlete && competitors[i].athlete.displayName;
+            if (n && n.length > 2) names.push(n);
           }
-          
           if (names.length > 0) {
             setGolferInput(names.join('\n'));
-            setParseStatus(`✓ Loaded ${names.length} golfers from Google Sheet`);
+            setParseStatus('✓ Loaded ' + names.length + ' golfers from ESPN');
           } else {
-            alert('Could not find golfer names.');
+            alert('No golfers found from ESPN. Try again shortly.');
           }
-        } catch (err) {
-          alert('Error loading from Google Sheet.');
+        } catch(err) {
+          alert('Error loading from ESPN: ' + err.message);
           console.error(err);
         }
         setIsFetching(false);
@@ -1094,7 +1024,7 @@
                 disabled={isFetching}
                 className="w-full mb-3 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all disabled:opacity-50 text-sm"
               >
-                {isFetching ? '⏳ Loading...' : '📡 Or Load from Google Sheet'}
+                {isFetching ? '⏳ Loading...' : '📡 Load Field from ESPN'}
               </button>
               
               <p className="text-sm text-gray-500 mb-2">Or paste manually:</p>

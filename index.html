@@ -299,9 +299,9 @@
             var name = (comp.athlete && comp.athlete.displayName) || '';
             if (!name) continue;
             var statusType = (comp.status && comp.status.type && comp.status.type.name) || '';
-            var displayValue = (comp.status && comp.status.displayValue) || '';
-            var isCut = statusType === 'cut' || displayValue.toUpperCase() === 'CUT';
-            var isWD  = statusType === 'wd'  || displayValue.toUpperCase() === 'WD';
+            var statusDisplay = (comp.status && comp.status.displayValue) || '';
+            var isCut = statusType === 'cut' || statusDisplay.toUpperCase() === 'CUT';
+            var isWD  = statusType === 'wd'  || statusDisplay.toUpperCase() === 'WD';
             var posId = comp.status && comp.status.position && comp.status.position.id;
             var position = posId ? parseInt(posId) : null;
             var linescores = comp.linescores || [];
@@ -310,8 +310,21 @@
               var val = linescores[r] && linescores[r].value;
               if (val !== undefined && val !== null && !isNaN(val)) rounds[r] = parseInt(val);
             }
-            var thru = (comp.status && comp.status.thru !== undefined) ? String(comp.status.thru) : null;
-            parsed.push({ name: name, position: position, rounds: rounds, score: displayValue || null, today: null, thru: thru, cut: isCut || isWD });
+            // ESPN score to par: comp.score is the total to-par value (e.g. -3, 0, +2)
+            // statusDisplay may be tee time or "Thru X" for pre-round/in-round players
+            // Use score field for actual to-par display
+            var scoreVal = comp.score || null;
+            var scoreDisplay = null;
+            if (isCut) { scoreDisplay = 'CUT'; }
+            else if (isWD) { scoreDisplay = 'WD'; }
+            else if (scoreVal !== null && scoreVal !== undefined) {
+              var sv = parseFloat(scoreVal);
+              if (!isNaN(sv)) { scoreDisplay = sv > 0 ? ('+' + sv) : (sv === 0 ? 'E' : String(sv)); }
+            }
+            var thru = (comp.status && comp.status.thru !== undefined && comp.status.thru !== null) ? String(comp.status.thru) : null;
+            // Only include position if player has actually started
+            var hasStarted = rounds[0] !== null || (thru !== null && thru !== '0');
+            parsed.push({ name: name, position: hasStarted ? position : null, rounds: rounds, score: scoreDisplay, today: null, thru: thru, cut: isCut || isWD });
           }
 
           setLiveScores(parsed);

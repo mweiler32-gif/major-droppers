@@ -299,32 +299,46 @@
             var name = (comp.athlete && comp.athlete.displayName) || '';
             if (!name) continue;
             var statusType = (comp.status && comp.status.type && comp.status.type.name) || '';
-            var statusDisplay = (comp.status && comp.status.displayValue) || '';
-            var isCut = statusType === 'cut' || statusDisplay.toUpperCase() === 'CUT';
-            var isWD  = statusType === 'wd'  || statusDisplay.toUpperCase() === 'WD';
+            var stateType  = (comp.status && comp.status.type && comp.status.type.state) || '';
+            var isCut = statusType === 'STATUS_CUT' || statusType === 'cut';
+            var isWD  = statusType === 'STATUS_WITHDRAWN' || statusType === 'wd';
+            var hasStarted = stateType !== 'pre';
+
+            // Position: ESPN uses "0" for not-yet-started players
             var posId = comp.status && comp.status.position && comp.status.position.id;
-            var position = posId ? parseInt(posId) : null;
+            var posInt = posId ? parseInt(posId) : 0;
+            var position = (hasStarted && posInt > 0) ? posInt : null;
+
+            // Round scores from linescores - only use if player has started that round
             var linescores = comp.linescores || [];
             var rounds = [null, null, null, null];
             for (var r = 0; r < 4; r++) {
-              var val = linescores[r] && linescores[r].value;
-              if (val !== undefined && val !== null && !isNaN(val)) rounds[r] = parseInt(val);
+              var ls = linescores[r];
+              if (ls && ls.value !== undefined && ls.value !== null && !isNaN(ls.value) && ls.teeTime && hasStarted) {
+                var rv = parseInt(ls.value);
+                if (rv > 50) rounds[r] = rv; // Only real stroke scores (50+ = valid golf score)
+              }
             }
-            // ESPN score to par: comp.score is the total to-par value (e.g. -3, 0, +2)
-            // statusDisplay may be tee time or "Thru X" for pre-round/in-round players
-            // Use score field for actual to-par display
-            var scoreVal = comp.score || null;
+
+            // Score to par: use statistics[0] (scoreToPar) displayValue
             var scoreDisplay = null;
             if (isCut) { scoreDisplay = 'CUT'; }
             else if (isWD) { scoreDisplay = 'WD'; }
-            else if (scoreVal !== null && scoreVal !== undefined) {
-              var sv = parseFloat(scoreVal);
-              if (!isNaN(sv)) { scoreDisplay = sv > 0 ? ('+' + sv) : (sv === 0 ? 'E' : String(sv)); }
+            else if (hasStarted) {
+              var stats = comp.statistics || [];
+              for (var si = 0; si < stats.length; si++) {
+                if (stats[si].name === 'scoreToPar') {
+                  var dv = stats[si].displayValue;
+                  if (dv && dv !== '-' && dv !== '--') { scoreDisplay = dv; }
+                  break;
+                }
+              }
             }
-            var thru = (comp.status && comp.status.thru !== undefined && comp.status.thru !== null) ? String(comp.status.thru) : null;
-            // Only include position if player has actually started
-            var hasStarted = rounds[0] !== null || (thru !== null && thru !== '0');
-            parsed.push({ name: name, position: hasStarted ? position : null, rounds: rounds, score: scoreDisplay, today: null, thru: thru, cut: isCut || isWD });
+
+            var thruRaw = (comp.status && comp.status.thru !== undefined) ? comp.status.thru : 0;
+            var thru = hasStarted ? String(thruRaw) : null;
+
+            parsed.push({ name: name, position: position, rounds: rounds, score: scoreDisplay, today: null, thru: thru, cut: isCut || isWD });
           }
 
           setLiveScores(parsed);
@@ -342,13 +356,14 @@
               if (match) {
                 var existing = newScores[match] || {};
                 var existingRounds = existing.rounds || [null, null, null, null];
+                var newPos = (p.position !== null && p.position !== undefined) ? p.position : (existing.position || null);
                 newScores[match] = {
-                  position: p.position || existing.position,
-                  rounds: p.rounds.map(function(rv, ri) { return rv !== null ? rv : existingRounds[ri] || null; }),
-                  score: p.score,
-                  today: p.today,
-                  thru: p.thru,
-                  cut: p.cut || existing.cut
+                  position: newPos === undefined ? null : newPos,
+                  rounds: p.rounds.map(function(rv, ri) { return (rv !== null && rv !== undefined) ? rv : (existingRounds[ri] || null); }),
+                  score: p.score !== undefined ? p.score : (existing.score || null),
+                  today: p.today !== undefined ? p.today : (existing.today || null),
+                  thru: p.thru !== undefined ? p.thru : (existing.thru || null),
+                  cut: (p.cut || existing.cut) ? true : false
                 };
               }
             }
@@ -613,12 +628,14 @@
             .map(g => getGolferScoreFromScores(scores, g)?.position)
             .filter(p => p !== null && p !== undefined)
             .sort((a, b) => a - b);
-          // Count survivors (players who made the cut = have a position)
+          // Count survivors - only apply cut logic after R2 is complete
+          const r2done = isRoundComplete(1);
           const survivors = golfers.filter(g => {
             const data = getGolferScoreFromScores(scores, g);
-            return data?.position !== null && data?.position !== undefined && !data?.cut;
+            if (!r2done) return true; // Before cut is determined, everyone survives
+            return data && data.position !== null && data.position !== undefined && !data.cut;
           }).length;
-          const eligible = survivors >= 5; // Must have 5+ survivors to qualify for overall
+          const eligible = !r2done || survivors >= 5; // Always eligible before cut
           const best5 = positions.slice(0, Math.min(5, positions.length));
           const total = best5.reduce((sum, p) => sum + p, 0);
           return { player, total, positions: best5, survivors, eligible };
@@ -828,8 +845,9 @@
         // OR if all golfers have a non-null score for that round (for past rounds)
         const currentRoundIndex = tournamentRound - 1;
         if (roundIndex < currentRoundIndex) {
-          // Past round — complete if all golfers have a score
-          return liveScores.every(g => g.rounds?.[roundIndex] !== null && g.rounds?.[roundIndex] !== undefined);
+          // Past round — complete if majority of golfers have a real stroke score (>50) for that round
+          const withScores = liveScores.filter(g => g.rounds && g.rounds[roundIndex] !== null && g.rounds[roundIndex] !== undefined && g.rounds[roundIndex] > 50);
+          return withScores.length > liveScores.length * 0.8; // 80%+ have scores = round complete
         }
         if (roundIndex === currentRoundIndex) {
           // Current round — complete only if all golfers show thru='F'

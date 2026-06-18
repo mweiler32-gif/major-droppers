@@ -1401,7 +1401,8 @@
               today: liveMatch.today || fromScores?.today,
               thru: liveMatch.thru || fromScores?.thru,
               rounds: liveMatch.rounds?.map((r, i) => r !== null ? r : fromScores?.rounds?.[i]) || fromScores?.rounds,
-              cut: liveMatch.cut || fromScores?.cut
+              cut: liveMatch.cut || fromScores?.cut,
+              teeTime: liveMatch.teeTime || null
             };
           }
           return fromScores;
@@ -1618,7 +1619,7 @@
                             </div>
                             <div className="col-span-1 text-center">
                               <span className="text-xs text-gray-500">
-                                {golferData?.thru || '—'}
+                                {golferData?.thru ? golferData.thru : (golferData?.teeTime || '—')}
                               </span>
                             </div>
                             {[0, 1, 2, 3].map(i => (

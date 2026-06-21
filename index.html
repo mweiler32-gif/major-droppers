@@ -303,20 +303,27 @@
             var isCut = statusType === 'STATUS_CUT' || statusType === 'cut';
             var isWD  = statusType === 'STATUS_WITHDRAWN' || statusType === 'wd';
             var hasStarted = stateType !== 'pre';
+            var thruRaw = (comp.status && comp.status.thru !== undefined) ? comp.status.thru : 0;
 
             // Position: ESPN uses "0" for not-yet-started players
             var posId = comp.status && comp.status.position && comp.status.position.id;
             var posInt = posId ? parseInt(posId) : 0;
             var position = (hasStarted && posInt > 0) ? posInt : null;
 
-            // Round scores from linescores - only use if player has started that round
+            // Round scores from linescores - only use a round's score once that round is fully complete (18 holes)
             var linescores = comp.linescores || [];
             var rounds = [null, null, null, null];
             for (var r = 0; r < 4; r++) {
               var ls = linescores[r];
-              if (ls && ls.value !== undefined && ls.value !== null && !isNaN(ls.value) && ls.teeTime && hasStarted) {
-                var rv = parseInt(ls.value);
-                if (rv > 50) rounds[r] = rv; // Only real stroke scores (50+ = valid golf score)
+              if (ls && ls.value !== undefined && ls.value !== null && !isNaN(ls.value)) {
+                var isCurrentRound = (r === detectedRound - 1);
+                // For the round currently in progress, only count it complete once thru hits 18
+                // For past rounds, the value is always final once it exists with a teeTime
+                var roundComplete = isCurrentRound ? (thruRaw >= 18) : (ls.teeTime ? true : false);
+                if (roundComplete) {
+                  var rv = parseInt(ls.value);
+                  if (rv > 50) rounds[r] = rv; // Sanity check: real stroke totals are 50+
+                }
               }
             }
 
@@ -335,7 +342,6 @@
               }
             }
 
-            var thruRaw = (comp.status && comp.status.thru !== undefined) ? comp.status.thru : 0;
             var thru = hasStarted ? String(thruRaw) : null;
 
             // Tee time for unstarted players - format as local time

@@ -351,17 +351,12 @@
               teeTimeDisplay = hrs + ':' + (mins < 10 ? '0' + mins : mins) + ' ' + ampm;
             }
 
-            // Today's score - score for current round only
+            // Today's score - use the current round's linescore displayValue (relative to par for that round only)
             var todayDisplay = null;
             if (hasStarted && thruRaw > 0) {
-              var stats2 = comp.statistics || [];
-              for (var si2 = 0; si2 < stats2.length; si2++) {
-                if (stats2[si2].name === 'scoreToPar') {
-                  // For R1, today === overall score
-                  var tdv = stats2[si2].displayValue;
-                  if (tdv && tdv !== '-' && tdv !== '--') { todayDisplay = tdv; }
-                  break;
-                }
+              var currentRoundLS = linescores[detectedRound - 1];
+              if (currentRoundLS && currentRoundLS.displayValue) {
+                todayDisplay = currentRoundLS.displayValue;
               }
             }
 
@@ -381,10 +376,11 @@
                 if (namesMatch(allGolfers[k], p.name)) { match = allGolfers[k]; break; }
               }
               if (match) {
-                var existing = newScores[match] || {};
+                var safeKey = match.replace(/[.#$\/\[\]]/g, '');
+                var existing = newScores[safeKey] || {};
                 var existingRounds = existing.rounds || [null, null, null, null];
                 var newPos = (p.position !== null && p.position !== undefined) ? p.position : (existing.position || null);
-                newScores[match] = {
+                newScores[safeKey] = {
                   position: newPos === undefined ? null : newPos,
                   rounds: p.rounds.map(function(rv, ri) { return (rv !== null && rv !== undefined) ? rv : (existingRounds[ri] || null); }),
                   score: p.score !== undefined ? p.score : (existing.score || null),

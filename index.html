@@ -344,7 +344,8 @@
         return price > 0 ? 100 / (price + 100) : (-price) / ((-price) + 100);
       };
 
-      // Fetch outright win odds, auto-discovering the active golf market. Prefers DraftKings.
+      // Fetch outright win odds, auto-discovering the active golf market.
+      // Uses CONSENSUS (median across all US books) so one book's bad/sentinel price can't skew a player.
       const fetchWinOdds = async () => {
         setOddsStatus('⏳ Loading odds...');
         try {
@@ -355,7 +356,7 @@
           const golfMarkets = sports.filter(s => s.group === 'Golf' && s.has_outrights && s.active);
           if (golfMarkets.length === 0) throw new Error('no active golf winner market');
 
-          // prefer the one matching our detected ESPN event, else first
+          // prefer the one matching our detected event, else first
           let market = golfMarkets[0];
           if (detectedEvent?.name) {
             const ev = normalizeName(detectedEvent.name);
@@ -366,25 +367,48 @@
             if (matched) market = matched;
           }
 
-          // 2) fetch outright odds for that market
+          // 2) fetch outright odds for that market (one region = one request, many books)
           const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${market.key}/odds?regions=us&markets=outrights&oddsFormat=american&apiKey=${ODDS_API_KEY}`);
           if (!oddsRes.ok) throw new Error('odds fetch failed');
           const oddsData = await oddsRes.json();
           const event = oddsData[0];
           if (!event) throw new Error('no odds event returned');
 
-          // 3) prefer DraftKings, fall back to first book with outrights
-          const books = event.bookmakers || [];
-          const book = books.find(b => b.key === 'draftkings') || books[0];
-          if (!book) throw new Error('no bookmakers');
-          const outcomes = ((book.markets || []).find(m => m.key === 'outrights') || {}).outcomes || [];
+          // 3) collect every book's price per player
+          const byPlayer = {};
+          (event.bookmakers || []).forEach(b => {
+            const oc = ((b.markets || []).find(m => m.key === 'outrights') || {}).outcomes || [];
+            oc.forEach(o => {
+              if (typeof o.price !== 'number' || isNaN(o.price)) return;
+              const k = normalizeName(o.name);
+              if (!k) return;
+              if (!byPlayer[k]) byPlayer[k] = { name: o.name, prices: [] };
+              byPlayer[k].prices.push(o.price);
+            });
+          });
+
+          // 4) best line = shortest (lowest) price across books.
+          // This feed carries high-side junk/sentinel numbers, so the real price is the lowest.
+          const bestPrice = (prices) => prices.reduce((m, p) => (p < m ? p : m), Infinity);
 
           const map = {};
-          outcomes.forEach(o => {
-            map[normalizeName(o.name)] = { name: o.name, price: o.price, impliedProb: americanToImplied(o.price), book: book.title };
+          Object.entries(byPlayer).forEach(([k, v]) => {
+            const price = bestPrice(v.prices);
+            map[k] = { name: v.name, price, impliedProb: americanToImplied(price), samples: v.prices.length };
           });
+
+          // Diagnostics — see what the feed actually contains
+          (event.bookmakers || []).forEach(b => {
+            const oc = ((b.markets || []).find(m => m.key === 'outrights') || {}).outcomes || [];
+            console.log('ODDS book', b.key, '→', oc.length, 'players');
+          });
+          ['cameron young', 'scottie scheffler', 'rory mcilroy'].forEach(k => {
+            if (byPlayer[k]) console.log('ODDS samples', k, '→ best', bestPrice(byPlayer[k].prices), '| all', byPlayer[k].prices.slice().sort((a, b) => a - b));
+          });
+
+          const bookCount = (event.bookmakers || []).length;
           setOddsMap(map);
-          setOddsStatus(`✓ Odds from ${book.title} (${outcomes.length} players)`);
+          setOddsStatus(`✓ Best-line odds from ${bookCount} books (${Object.keys(map).length} players)`);
           return map;
         } catch (err) {
           console.warn('fetchWinOdds failed:', err);
@@ -626,10 +650,21 @@
         }
       };
 
-      // Load golfers from ESPN (auto-detected event) and sort by win odds
+      // Load the tournament field from The Odds API (full field, pre-sorted by win odds).
+      // ESPN's leaderboard only serves the *current* live event, so it can't provide an
+      // upcoming field pre-tournament — the odds feed already has the active major's field.
       const loadGolfersFromSheet = async () => {
         setIsFetching(true);
         try {
+          const map = await fetchWinOdds();
+          const sorted = Object.values(map).sort((a, b) => b.impliedProb - a.impliedProb).map(o => o.name);
+          if (sorted.length > 0) {
+            setGolferInput(sorted.join('\n'));
+            setParseStatus(`✓ Loaded ${sorted.length} golfers from odds, sorted by win odds`);
+            setIsFetching(false);
+            return;
+          }
+          // Fallback: ESPN's current event (works once the tournament is live)
           const response = await fetch(espnLeaderboardUrl());
           if (!response.ok) throw new Error('ESPN API failed');
           const data = await response.json();
@@ -641,20 +676,13 @@
             if (n && n.length > 2) names.push(n);
           }
           if (names.length > 0) {
-            const map = await fetchWinOdds();
-            const sorted = [...names].sort((a, b) => {
-              const pa = getGolferOdds(a, map)?.impliedProb ?? -1;
-              const pb = getGolferOdds(b, map)?.impliedProb ?? -1;
-              return pb - pa; // favorites (highest win prob) first; unmatched sink to bottom
-            });
-            setGolferInput(sorted.join('\n'));
-            const matched = sorted.filter(x => getGolferOdds(x, map)).length;
-            setParseStatus(`✓ Loaded ${sorted.length} golfers, sorted by win odds (${matched} matched)`);
+            setGolferInput(names.join('\n'));
+            setParseStatus(`✓ Loaded ${names.length} golfers from ESPN (no odds available)`);
           } else {
-            alert('No golfers found from ESPN. Try again shortly.');
+            alert('No field found from odds or ESPN. Try again shortly.');
           }
         } catch(err) {
-          alert('Error loading from ESPN: ' + err.message);
+          alert('Error loading field: ' + err.message);
           console.error(err);
         }
         setIsFetching(false);
@@ -1037,7 +1065,7 @@
                 disabled={isFetching}
                 className="w-full mb-3 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all disabled:opacity-50"
               >
-                {isFetching ? '⏳ Loading field...' : `⚡ Load ${detectedEvent?.name || 'Upcoming Tournament'} Field from ESPN`}
+                {isFetching ? '⏳ Loading field...' : `⚡ Load ${detectedEvent?.name || 'Upcoming Tournament'} Field`}
               </button>
               {oddsStatus && <p className="text-xs text-gray-500 text-center mb-3">{oddsStatus}</p>}
               
@@ -2429,7 +2457,7 @@
           <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 text-white px-4 py-4 shadow-lg">
             <div className="max-w-3xl mx-auto flex justify-between items-center">
               <div>
-                <h1 className="text-xl font-bold">🏌️ Major Droppers <span className="text-xs font-normal text-emerald-200 ml-1">v2.4 · calendar-fix</span></h1>
+                <h1 className="text-xl font-bold">🏌️ Major Droppers <span className="text-xs font-normal text-emerald-200 ml-1">v2.7 · best-line</span></h1>
                 <p className="text-emerald-200 text-sm">{detectedEvent?.name || tournamentName}</p>
               </div>
               <div className={`w-3 h-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} title={connected ? 'Connected' : 'Disconnected'} />

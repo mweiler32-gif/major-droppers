@@ -47,6 +47,17 @@
   .nav-btn { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; background:transparent; border:1px solid rgba(255,255,255,0.15); color:var(--cream-dim); padding:6px 16px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
   .nav-btn:hover { color:var(--cream); border-color:var(--gold); background:rgba(255,255,255,0.08); }
   .nav-btn.active { background:var(--red); color:var(--white); border-color:var(--red); }
+  /* RACE TOGGLE */
+  .race-tabs { display:flex; gap:4px; margin-bottom:14px; flex-wrap:wrap; }
+  .race-btn { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:2px; background:transparent; border:1px solid rgba(255,255,255,0.12); color:var(--cream-dim); padding:7px 18px; cursor:pointer; border-radius:2px; transition:all 0.15s; }
+  .race-btn:hover { color:var(--cream); border-color:rgba(255,255,255,0.28); }
+  .race-btn.active { background:var(--gold); color:var(--green-dark); border-color:var(--gold); }
+  .race-sub { font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--cream-dim); letter-spacing:1px; margin-bottom:12px; }
+  .split-hr { display:flex; align-items:baseline; justify-content:flex-end; gap:8px; }
+  .split-num { font-family:'Bebas Neue',sans-serif; font-size:15px; color:var(--cream-dim); }
+  .split-num b { color:var(--white); }
+  .swap-note { font-family:'Barlow Condensed',sans-serif; font-size:10px; color:var(--brown-light); letter-spacing:0.5px; margin-left:4px; }
+  .warn-banner { background:rgba(196,30,58,0.1); border:1px solid rgba(196,30,58,0.35); border-radius:3px; padding:8px 12px; margin-bottom:12px; font-family:'Barlow Condensed',sans-serif; font-size:12px; color:#ff8095; letter-spacing:0.5px; }
   main { max-width:1120px; margin:0 auto; padding:20px 12px 80px; }
   .panel { display:none; animation:fadeIn 0.2s ease; }
   .panel.active { display:block; }
@@ -193,7 +204,14 @@
       <span class="upd-txt" id="upd-txt">Not yet refreshed</span>
       <button class="refresh-btn" onclick="loadLive(true);loadTodayGames(true).then(()=>{renderTodaysDingers();renderYesterdaysDingers();})">⟳ Refresh</button>
     </div>
-    <div class="sec-hd">Standings</div>
+    <div class="sec-hd" id="standings-hd">Standings</div>
+    <div class="race-tabs" id="race-tabs">
+      <button class="race-btn" onclick="setRace('h1',this)">First Half</button>
+      <button class="race-btn" onclick="setRace('h2',this)">Second Half</button>
+      <button class="race-btn active" onclick="setRace('total',this)">Total</button>
+    </div>
+    <div class="race-sub" id="race-sub"></div>
+    <div id="resolve-warn"></div>
     <div id="standings-wrap"><div class="loading-pulse">LOADING...</div></div>
     <div class="sec-hd" style="margin-top:28px">Today's Dingers</div>
     <div id="todays-dingers"><div class="loading-pulse">LOADING...</div></div>
@@ -226,7 +244,7 @@
     <h3 id="ir-modal-title">PLACE ON IR</h3>
     <p id="ir-modal-sub"></p>
     <input class="modal-input" id="ir-rep-name" type="text" placeholder="Replacement player name" />
-    <input class="modal-input" id="ir-rep-hrs" type="number" placeholder="Replacement player current HR total" min="0" />
+    <input class="modal-input" id="ir-rep-hrs" type="number" placeholder="Replacement's current 2nd-half HR total" min="0" />
     <div class="modal-btns">
       <button class="btn-primary" onclick="confirmIR()">CONFIRM</button>
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
@@ -239,6 +257,16 @@
 const SEASON_START = new Date('2026-03-25');
 const SEASON_END   = new Date('2026-09-27');
 const SEASON_DAYS  = Math.round((SEASON_END - SEASON_START) / 86400000);
+
+// ── ALL-STAR BREAK / HALF SPLIT ───────────────────────────
+// First half = season start through the last day before the 2026 ASG (played 7/14).
+// Second half = 7/15 onward (games resume ~7/17). These windows are queried
+// directly from the MLB Stats API so every manager/device sees identical frozen
+// first-half numbers with no shared database required.
+const FIRST_HALF_START = '2026-03-25';
+const FIRST_HALF_END   = '2026-07-14';
+const SECOND_HALF_START = '2026-07-15';
+let activeRace = 'total'; // 'h1' | 'h2' | 'total'
 
 function dayOfSeason() {
   return Math.max(1, Math.min(Math.round((new Date() - SEASON_START) / 86400000), SEASON_DAYS));
@@ -288,12 +316,57 @@ const POSITIONS = ['C','1B','2B','SS','3B','LF','CF','RF','DH'];
 const SK = 'dingers2026_v4';
 const TODAY_STATS_KEY = 'dingers2026_todaystats';
 
+// ── SECOND-HALF ROSTERS ───────────────────────────────────
+// Built from the first-half ROSTERS; only changed slots are overridden below.
+// Any manager/slot not listed keeps its first-half player automatically.
+function deepCopyRosters(src) {
+  const out = {};
+  Object.entries(src).forEach(([m, slots]) => { out[m] = { ...slots }; });
+  return out;
+}
+const SECOND_HALF_ROSTERS = deepCopyRosters(ROSTERS);
+// Palmer
+SECOND_HALF_ROSTERS.PALMER.SS   = 'CJ Abrams';        // out Trevor Story
+SECOND_HALF_ROSTERS.PALMER.DH   = 'Yandy Diaz';       // out Christian Yelich
+// Sieve
+SECOND_HALF_ROSTERS.SIEVE.RF    = 'Jordan Walker';    // out Fernando Tatis Jr.
+SECOND_HALF_ROSTERS.SIEVE['1B'] = 'Ben Rice';         // out Spencer Torkelson
+SECOND_HALF_ROSTERS.SIEVE['3B'] = 'Kazuma Okamoto';   // out Austin Riley
+SECOND_HALF_ROSTERS.SIEVE.C     = 'Samuel Basallo';   // out Salvador Perez
+SECOND_HALF_ROSTERS.SIEVE.DH    = 'Dominic Canzone';  // out Brent Rooker
+// Craig
+SECOND_HALF_ROSTERS.CRAIG['3B'] = 'Miguel Vargas';    // out Jose Ramirez
+SECOND_HALF_ROSTERS.CRAIG.CF    = 'Byron Buxton';     // out Trent Grisham
+// Roberts
+SECOND_HALF_ROSTERS.ROBERTS.LF  = 'Casey Schmitt';    // out Taylor Ward
+SECOND_HALF_ROSTERS.ROBERTS.RF  = 'Esmerlyn Valdez';  // out Kyle Tucker
+// Weiler
+SECOND_HALF_ROSTERS.WEILER.C    = 'Dillon Dingler';   // out William Contreras
+SECOND_HALF_ROSTERS.WEILER.RF   = 'Jac Caglianone';   // out Ronald Acuna Jr.
+SECOND_HALF_ROSTERS.WEILER['2B']= 'Brice Turang';     // out Matt McLain
+
+// Every distinct player across both halves (used to resolve MLB IDs).
+function allRosteredPlayers() {
+  const set = new Set();
+  MANAGERS.forEach(m => POSITIONS.forEach(pos => {
+    if (ROSTERS[m][pos]) set.add(ROSTERS[m][pos]);
+    if (SECOND_HALF_ROSTERS[m][pos]) set.add(SECOND_HALF_ROSTERS[m][pos]);
+  }));
+  return [...set];
+}
+// Which slots changed between halves, for display.
+function slotChanged(mgr, pos) {
+  return ROSTERS[mgr][pos] !== SECOND_HALF_ROSTERS[mgr][pos];
+}
+
 // ── STATE ─────────────────────────────────────────────────
 function mkState() { return { ir: Object.fromEntries(MANAGERS.map(m=>[m,{}])) }; }
 let S = (() => { try { const r=localStorage.getItem(SK); return r?JSON.parse(r):mkState(); } catch(e){return mkState();} })();
 function save() { try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){} }
 
-let liveHR = {};
+let liveHR = {};                 // season totals (h1 + h2), derived
+let h1HR = {};                   // first-half HRs (frozen window)
+let h2HR = {};                   // second-half HRs (7/15 → today)
 let splitHR = { d7:{}, d14:{}, d30:{} };
 let todayGames = {};  // playerNameUpper -> { status, gameTime, inning, inningHalf, awayTeam, homeTeam, awayScore, homeScore, ab, h, hr, rbi }
 let rMgr = 'WEILER';
@@ -303,22 +376,25 @@ let rosterAutoRefresh = null;
 // ── HR DATA ───────────────────────────────────────────────
 const normName = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
 
-function getHR(name) {
+function lookupHR(map, name) {
   if (!name) return null;
   const u = normName(name);
-  if (liveHR[u] !== undefined) return liveHR[u];
+  if (map[u] !== undefined) return map[u];
   const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
-  if (stripped !== u && liveHR[stripped] !== undefined) return liveHR[stripped];
+  if (stripped !== u && map[stripped] !== undefined) return map[stripped];
   const parts = u.split(' ');
   const last = parts[parts.length - 1];
   if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
-    if (liveHR[last] !== undefined) return liveHR[last];
+    if (map[last] !== undefined) return map[last];
   } else if (parts.length >= 3) {
     const secondLast = parts[parts.length - 2];
-    if (liveHR[secondLast] !== undefined) return liveHR[secondLast];
+    if (map[secondLast] !== undefined) return map[secondLast];
   }
   return null;
 }
+function getHR(name) { return lookupHR(liveHR, name); }   // season
+function getH1(name) { return lookupHR(h1HR, name); }     // first half
+function getH2(name) { return lookupHR(h2HR, name); }     // second half
 
 // MLB player IDs for direct stat lookup (bypasses leaderboard minimum threshold)
 const PLAYER_IDS = {
@@ -370,36 +446,133 @@ const PLAYER_IDS = {
   'KYLE SCHWARBER': 656941,
 }
 
-async function fetchHRLeaders(startDate, endDate) {
-  // Fetch all league players directly by MLB ID - bypasses leaderboard threshold
-  // For season totals (startDate = season start), fetch season stats
-  // For splits (recent dates), fetch with date range via gamelog approach
-  const isSeason = startDate <= '2026-03-25';
+// ── AUTO PLAYER-ID RESOLUTION ─────────────────────────────
+// Resolves every rostered name to its MLB player ID and current team ID from the
+// full 2026 player list, so new roster additions work without editing any table.
+// The hand-verified PLAYER_IDS / PLAYER_TEAM_IDS below act as overrides for any
+// tricky/duplicate names.
+let autoIdMap = {};        // normName(fullName) -> playerId
+let autoTeamMap = {};      // normName(fullName) -> teamId
+let lastNameIndex = {};    // normName(lastName) -> [{id, teamId, full}]
+let ROSTER_IDS = {};       // normName(rosterName) -> playerId  (players we actually fetch)
+let unresolvedPlayers = []; // roster names we could not map to an ID
+let playerIndexReady = false;
 
-  const fetches = Object.entries(PLAYER_IDS).map(async ([name, id]) => {
+async function buildPlayerIndex() {
+  try {
+    const r = await fetch('https://statsapi.mlb.com/api/v1/sports/1/players?season=2026');
+    if (!r.ok) { console.error('Player index failed:', r.status); return; }
+    const d = await r.json();
+    const people = d?.people || [];
+    autoIdMap = {}; autoTeamMap = {}; lastNameIndex = {};
+    people.forEach(p => {
+      const id = p.id;
+      const teamId = p.currentTeam?.id ?? null;
+      const key = normName(p.fullName || '');
+      if (!key) return;
+      if (autoIdMap[key] === undefined) autoIdMap[key] = id;
+      if (teamId != null && autoTeamMap[key] === undefined) autoTeamMap[key] = teamId;
+      const stripped = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+      if (stripped !== key) {
+        if (autoIdMap[stripped] === undefined) autoIdMap[stripped] = id;
+        if (teamId != null && autoTeamMap[stripped] === undefined) autoTeamMap[stripped] = teamId;
+      }
+      const last = stripped.split(' ').slice(-1)[0];
+      (lastNameIndex[last] = lastNameIndex[last] || []).push({ id, teamId, full: stripped });
+    });
+    playerIndexReady = true;
+  } catch(e) { console.error('Player index error:', e); }
+}
+
+// Resolve a roster name to a player ID: hand override → exact/stripped → unique last name.
+function resolvePlayerId(name) {
+  const u = normName(name);
+  const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+  if (PLAYER_IDS[u] !== undefined) return PLAYER_IDS[u];
+  if (PLAYER_IDS[stripped] !== undefined) return PLAYER_IDS[stripped];
+  if (autoIdMap[u] !== undefined) return autoIdMap[u];
+  if (autoIdMap[stripped] !== undefined) return autoIdMap[stripped];
+  const last = stripped.split(' ').slice(-1)[0];
+  const cands = lastNameIndex[last] || [];
+  if (cands.length === 1) return cands[0].id;
+  if (cands.length > 1) {
+    const firstInit = stripped.charAt(0);
+    const byInit = cands.filter(c => c.full.charAt(0) === firstInit);
+    if (byInit.length === 1) return byInit[0].id;
+  }
+  return null;
+}
+
+// Resolve a roster name to its current team ID (for live/upcoming game context).
+function teamIdFor(name) {
+  const u = normName(name);
+  const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+  if (PLAYER_TEAM_IDS[u] !== undefined) return PLAYER_TEAM_IDS[u];
+  if (PLAYER_TEAM_IDS[stripped] !== undefined) return PLAYER_TEAM_IDS[stripped];
+  if (autoTeamMap[u] !== undefined) return autoTeamMap[u];
+  if (autoTeamMap[stripped] !== undefined) return autoTeamMap[stripped];
+  const last = stripped.split(' ').slice(-1)[0];
+  const cands = lastNameIndex[last] || [];
+  if (cands.length === 1) return cands[0].teamId;
+  if (cands.length > 1) {
+    const firstInit = stripped.charAt(0);
+    const byInit = cands.filter(c => c.full.charAt(0) === firstInit);
+    if (byInit.length === 1) return byInit[0].teamId;
+  }
+  return null;
+}
+
+// Build the fetch set (every rostered player → ID) and record any misses.
+function resolveRosterIds() {
+  ROSTER_IDS = {};
+  unresolvedPlayers = [];
+  allRosteredPlayers().forEach(name => {
+    const id = resolvePlayerId(name);
+    if (id != null) ROSTER_IDS[normName(name)] = id;
+    else unresolvedPlayers.push(name);
+  });
+  renderResolveWarning();
+}
+
+function renderResolveWarning() {
+  const el = document.getElementById('resolve-warn');
+  if (!el) return;
+  if (!unresolvedPlayers.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="warn-banner">⚠ Couldn't match ${unresolvedPlayers.length} player name(s) to MLB stats: ${unresolvedPlayers.join(', ')}. Check the spelling in the roster — their HRs will read 0 until fixed.</div>`;
+}
+
+// Set of all team IDs relevant to our league (both halves) for game filtering.
+function leagueTeamIdSet() {
+  const s = new Set(Object.values(PLAYER_TEAM_IDS));
+  allRosteredPlayers().forEach(n => { const t = teamIdFor(n); if (t != null) s.add(t); });
+  return s;
+}
+
+// Fetch HRs for every rostered player over a date window, keyed for lookupHR().
+async function fetchHRLeaders(startDate, endDate) {
+  const entries = Object.entries(ROSTER_IDS);
+  const fetches = entries.map(async ([nkey, id]) => {
     try {
-      const url = isSeason
-        ? `https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=season&season=2026&group=hitting`
-        : `https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=byDateRange&season=2026&startDate=${startDate}&endDate=${endDate}&group=hitting`;
+      const url = `https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=byDateRange&season=2026&startDate=${startDate}&endDate=${endDate}&group=hitting`;
       const r = await fetch(url);
-      if (!r.ok) return { name, hrs: 0 };
+      if (!r.ok) return { nkey, hrs: 0 };
       const d = await r.json();
       const splits = d?.stats?.[0]?.splits || [];
+      // byDateRange returns the aggregate total as splits[0]; any further splits are
+      // a monthly/per-stint breakdown of that same total, so summing them double-counts.
       const hrs = parseInt(splits[0]?.stat?.homeRuns) || 0;
-      return { name, hrs };
+      return { nkey, hrs };
     } catch(e) {
-      return { name, hrs: 0 };
+      return { nkey, hrs: 0 };
     }
   });
-
   const results = await Promise.all(fetches);
   const map = {};
-  results.forEach(({ name, hrs }) => {
-    const key = normName(name);
-    map[key] = hrs;
-    const stripped = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
-    if (stripped !== key) map[stripped] = hrs;
-    const parts = key.split(' ');
+  results.forEach(({ nkey, hrs }) => {
+    map[nkey] = hrs;
+    const stripped = nkey.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/,'').trim();
+    if (stripped !== nkey) map[stripped] = hrs;
+    const parts = nkey.split(' ');
     const last = parts[parts.length - 1];
     if (!['JR.','JR','SR.','SR','II','III','IV'].includes(last)) {
       if (!map[last]) map[last] = hrs;
@@ -409,14 +582,22 @@ async function fetchHRLeaders(startDate, endDate) {
 }
 
 let lastHRFetch = 0;
-const HR_CACHE_KEY = 'dingers2026_hrcache';
+const HR_CACHE_KEY = 'dingers2026_hrcache_v2';
+
+// Season total = first half + second half, merged per player key.
+function deriveSeason(h1, h2) {
+  const out = {};
+  const keys = new Set([...Object.keys(h1), ...Object.keys(h2)]);
+  keys.forEach(k => { out[k] = (h1[k] || 0) + (h2[k] || 0); });
+  return out;
+}
 
 async function loadLive(force = false) {
   const now = Date.now();
   const TEN_MIN = 5 * 60 * 1000; // 5 min cache
 
-  // Use cache if recent enough and not forced
-  if (!force && (now - lastHRFetch) < TEN_MIN) {
+  // Use in-memory cache if recent enough and not forced
+  if (!force && (now - lastHRFetch) < TEN_MIN && Object.keys(liveHR).length) {
     renderStandings(); renderActivity().catch(console.error); renderSplits();
     return;
   }
@@ -424,8 +605,9 @@ async function loadLive(force = false) {
   // Try localStorage cache first for instant render
   try {
     const cached = JSON.parse(localStorage.getItem(HR_CACHE_KEY) || 'null');
-    if (!force && cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN) {
-      liveHR = cached.season;
+    if (!force && cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN && cached.h1) {
+      h1HR = cached.h1; h2HR = cached.h2;
+      liveHR = deriveSeason(h1HR, h2HR);
       splitHR = { d7: cached.d7, d14: cached.d14, d30: cached.d30 };
       lastHRFetch = cached.ts;
       document.getElementById('upd-txt').textContent = `Updated ${new Date(cached.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · cached`;
@@ -435,26 +617,32 @@ async function loadLive(force = false) {
   } catch(e) {}
 
   document.getElementById('upd-txt').textContent = 'Fetching...';
+  // Make sure names are resolved to IDs before fetching stats.
+  if (!playerIndexReady) { await buildPlayerIndex(); resolveRosterIds(); }
+  else if (!Object.keys(ROSTER_IDS).length) { resolveRosterIds(); }
+
   try {
     const today = todayStr();
-    // Fetch season total first, then splits in parallel
-    const [season, d7, d14, d30] = await Promise.all([
-      fetchHRLeaders('2026-03-25', today),
+    // First half is a frozen window; second half + splits run to today.
+    const [h1, h2, d7, d14, d30] = await Promise.all([
+      fetchHRLeaders(FIRST_HALF_START, FIRST_HALF_END),
+      fetchHRLeaders(SECOND_HALF_START, today),
       fetchHRLeaders(dateStr(7),  today),
       fetchHRLeaders(dateStr(14), today),
       fetchHRLeaders(dateStr(30), today),
     ]);
-    liveHR = season;
+    h1HR = h1; h2HR = h2;
+    liveHR = deriveSeason(h1, h2);
     splitHR = { d7, d14, d30 };
     lastHRFetch = Date.now();
     // Cache to localStorage
     try {
       localStorage.setItem(HR_CACHE_KEY, JSON.stringify({
         date: today, ts: lastHRFetch,
-        season, d7, d14, d30
+        h1, h2, d7, d14, d30
       }));
     } catch(e) {}
-    const ct = Object.values(season).filter(v=>v>0).length;
+    const ct = Object.values(liveHR).filter(v=>v>0).length;
     document.getElementById('upd-txt').textContent = `Updated ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ct} players with HRs`;
   } catch(e) {
     document.getElementById('upd-txt').textContent = 'Could not load HR data';
@@ -491,7 +679,7 @@ async function loadTodayGames(force = false) {
     let hasLive = false;
 
     // Only fetch boxscores for games involving our league's teams (saves ~13 API calls)
-    const leagueTeamIds = new Set(Object.values(PLAYER_TEAM_IDS));
+    const leagueTeamIds = leagueTeamIdSet();
     const relevantGames = games.filter(g => {
       const awayId = g.teams?.away?.team?.id;
       const homeId = g.teams?.home?.team?.id;
@@ -642,7 +830,7 @@ function getPlayerGameInfo(playerName) {
   if (stripped !== u && todayGames[stripped]) return todayGames[stripped];
   // 3. Team ID lookup
   // Check both the roster name AND common API variants (Nick/Nicholas etc)
-  const teamId = PLAYER_TEAM_IDS[u] || PLAYER_TEAM_IDS[stripped];
+  const teamId = teamIdFor(u) || teamIdFor(stripped);
   if (teamId) {
     // For active games: find any boxscore entry on the correct team
     // whose last name matches ours
@@ -739,7 +927,7 @@ async function renderYesterdaysDingers() {
     MANAGERS.forEach(mgr => {
       POSITIONS.forEach(pos => {
         const irData = S.ir[mgr]?.[pos];
-        const player = irData?.replacement || ROSTERS[mgr][pos];
+        const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
         const key = normName(player);
         const stripped = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
         const last = stripped.split(' ').slice(-1)[0];
@@ -781,30 +969,57 @@ async function renderYesterdaysDingers() {
 }
 
 // ── TEAM DATA ─────────────────────────────────────────────
-function getTeamData(mgr) {
+// FIRST HALF: frozen. First-half roster, first-half HRs, no IR (the half is closed).
+function getFirstHalfTeam(mgr) {
   const positions = [];
   let totalHR = 0;
   POSITIONS.forEach(pos => {
     const player = ROSTERS[mgr][pos];
+    const hr = getH1(player) ?? 0;
+    positions.push({ pos, player, hr, onIR:false, replacement:null });
+    totalHR += hr;
+  });
+  positions.sort((a,b) => b.hr - a.hr);
+  return { positions, totalHR };
+}
+
+// SECOND HALF: live. Second-half roster, second-half HRs. IR applies here only,
+// since the first half is locked — locked/replacement HRs are second-half values.
+function getSecondHalfTeam(mgr) {
+  const positions = [];
+  let totalHR = 0;
+  POSITIONS.forEach(pos => {
+    const player = SECOND_HALF_ROSTERS[mgr][pos];
     const irData = S.ir[mgr]?.[pos];
+    const changed = slotChanged(mgr, pos);
     if (!irData) {
-      const hr = getHR(player) ?? 0;
-      positions.push({ pos, player, hr, onIR:false, replacement:null });
+      const hr = getH2(player) ?? 0;
+      positions.push({ pos, player, hr, onIR:false, replacement:null, changed });
       totalHR += hr;
     } else {
       const locked = irData.lockedHR || 0;
       let repAdded = 0;
       if (irData.replacement) {
-        const repCurrent = getHR(irData.replacement) ?? irData.repStartHR ?? 0;
+        const repCurrent = getH2(irData.replacement) ?? irData.repStartHR ?? 0;
         repAdded = Math.max(0, repCurrent - (irData.repStartHR || 0));
       }
       const slotHR = locked + repAdded;
-      positions.push({ pos, player, hr:locked, onIR:true, replacement:irData.replacement, repAdded, slotHR, lockedHR:locked });
+      positions.push({ pos, player, hr:locked, onIR:true, replacement:irData.replacement, repAdded, slotHR, lockedHR:locked, changed });
       totalHR += slotHR;
     }
   });
   positions.sort((a,b) => (b.slotHR ?? b.hr) - (a.slotHR ?? a.hr));
   return { positions, totalHR };
+}
+
+// TOTAL: first-half locked total + second-half live total.
+function getTotalHR(mgr) {
+  return getFirstHalfTeam(mgr).totalHR + getSecondHalfTeam(mgr).totalHR;
+}
+
+// Convenience: pick the team object for a race ('h1' | 'h2').
+function getRaceTeam(mgr, race) {
+  return race === 'h1' ? getFirstHalfTeam(mgr) : getSecondHalfTeam(mgr);
 }
 
 // ── PERSIST TODAY STATS ──────────────────────────────────
@@ -852,7 +1067,7 @@ function renderTodaysDingers() {
   MANAGERS.forEach(mgr => {
     POSITIONS.forEach(pos => {
       const irData = S.ir[mgr]?.[pos];
-      const player = irData?.replacement || ROSTERS[mgr][pos];
+      const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
       const gi = getPlayerGameInfo(player);
       if (gi && gi.hr > 0) {
         dingers.push({ player, mgr, pos, hr: gi.hr, away: gi.away, home: gi.home, isFinal: gi.isFinal, isLive: gi.isLive });
@@ -893,24 +1108,53 @@ function getTodayHRsForManager(mgr) {
   let total = 0;
   POSITIONS.forEach(pos => {
     const irData = S.ir[mgr]?.[pos];
-    const player = irData?.replacement || ROSTERS[mgr][pos];
+    const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
     const gi = getPlayerGameInfo(player);
     if (gi && !gi.isUpcoming && gi.hr > 0) total += gi.hr;
   });
   return total;
 }
 
+const RACE_LABEL = { h1:'First Half', h2:'Second Half', total:'Total' };
+const RACE_SUB = {
+  h1: 'Frozen at the All-Star break — first-half rosters, HRs through July 14. This race is final.',
+  h2: 'Live — second-half rosters, HRs from July 15 onward. Second-half games resume mid-July.',
+  total: 'First half (locked) + second half (live). Dropped players keep their first-half HRs; new additions count only from the break forward.',
+};
+
+function setRace(race, btn) {
+  activeRace = race;
+  document.querySelectorAll('#race-tabs .race-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderStandings();
+}
+
 function renderStandings() {
+  const race = activeRace;
+  document.getElementById('standings-hd').textContent = `${RACE_LABEL[race]} Standings`;
+  const subEl = document.getElementById('race-sub');
+  if (subEl) subEl.textContent = RACE_SUB[race];
+
   const data = MANAGERS.map(m => {
-    const { totalHR } = getTeamData(m);
-    return { mgr:m, totalHR, pace:projectedFinal(totalHR) };
-  }).sort((a,b) => b.totalHR - a.totalHR);
-  const mx = Math.max(...data.map(d=>d.totalHR), 1);
-  const splits = computeSplits();
+    if (race === 'total') {
+      const h1 = getFirstHalfTeam(m).totalHR;
+      const h2 = getSecondHalfTeam(m).totalHR;
+      return { mgr:m, value:h1+h2, h1, h2 };
+    }
+    return { mgr:m, value:getRaceTeam(m, race).totalHR };
+  }).sort((a,b) => b.value - a.value);
+
+  const mx = Math.max(...data.map(d=>d.value), 1);
+  // "Today" flash only applies to live races (second half / total).
+  const showToday = race !== 'h1';
+
   document.getElementById('standings-wrap').innerHTML = data.map((d,i) => {
-    const todayHRs = getTodayHRsForManager(d.mgr);
+    const todayHRs = showToday ? getTodayHRsForManager(d.mgr) : 0;
     const flashBadge = todayHRs > 0
       ? `<span style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;color:var(--red);margin-left:8px;letter-spacing:0.5px">💥 x${todayHRs}</span>`
+      : '';
+    const breakdown = race === 'total'
+      ? `<div class="split-hr"><span class="split-num">${d.h1} <span style="font-size:11px">1H</span> + <b>${d.h2}</b> <span style="font-size:11px">2H</span></span></div>`
       : '';
     return `<div class="stand-card ${i===0?'first':''}" onclick="goToRoster('${d.mgr}')" style="cursor:pointer">
       <div class="stand-top">
@@ -921,12 +1165,13 @@ function renderStandings() {
         </div>
         <div style="text-align:right">
           <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:0">
-            <div class="hr-big">${d.totalHR}</div>${flashBadge}
+            <div class="hr-big">${d.value}</div>${flashBadge}
           </div>
           <div class="hr-lbl">HOME RUNS</div>
+          ${breakdown}
         </div>
       </div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${(d.totalHR/mx*100).toFixed(1)}%"></div></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(d.value/mx*100).toFixed(1)}%"></div></div>
     </div>`;
   }).join('');
   renderTodaysDingers();
@@ -937,9 +1182,8 @@ function getTeamSplit(mgr, hrMap) {
   let total = 0;
   POSITIONS.forEach(pos => {
     const irData = S.ir[mgr]?.[pos];
-    const player = irData?.replacement || ROSTERS[mgr][pos];
-    const u = (player||'').toUpperCase();
-    total += hrMap[u] ?? hrMap[u.split(' ').slice(-1)[0]] ?? 0;
+    const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
+    total += lookupHR(hrMap, player) ?? 0;
   });
   return total;
 }
@@ -952,7 +1196,7 @@ function computeSplits() {
 }
 function renderSplits() {
   const splits = computeSplits();
-  const data = MANAGERS.map(m => ({ mgr:m, total:getTeamData(m).totalHR, ...splits[m] })).sort((a,b)=>b.total-a.total);
+  const data = MANAGERS.map(m => ({ mgr:m, total:getTotalHR(m), ...splits[m] })).sort((a,b)=>b.total-a.total);
   document.getElementById('splits-body').innerHTML = `
     <p style="font-family:Barlow Condensed,sans-serif;font-size:12px;color:var(--cream-dim);margin-bottom:14px">HR totals for the last 7, 14, and 30 calendar days pulled directly from MLB Stats API.</p>
     <table class="splits-tbl">
@@ -977,22 +1221,29 @@ function switchRMgr(m) { rMgr=m; renderRoster(); }
 
 function renderRoster() {
   renderRosterTabs();
-  const { positions, totalHR } = getTeamData(rMgr);
+  const { positions, totalHR: h2Total } = getSecondHalfTeam(rMgr);
+  const h1Total = getFirstHalfTeam(rMgr).totalHR;
+  const seasonTotal = h1Total + h2Total;
   const body = document.getElementById('roster-body');
 
   const rows = positions.map(p => {
-    const hr = p.onIR ? p.slotHR : p.hr;
-    const pace = projectedFinal(hr);
+    const h2hr = p.onIR ? p.slotHR : p.hr;
     const displayPlayer = p.onIR && p.replacement ? p.replacement : p.player;
+    const season = getHR(displayPlayer) ?? 0;
     const gi = getPlayerGameInfo(displayPlayer);
     const isLive = gi?.isLive || false;
+    const firstHalfPlayer = ROSTERS[rMgr][p.pos];
 
     // Player name row
     let nameHtml = `<span class="pos-pill">${p.pos}</span>`;
     nameHtml += `<span class="player-name">${p.player}</span>`;
+    if (p.changed) nameHtml += `<span class="rep-pill">NEW 2H</span>`;
     if (p.onIR) nameHtml += `<span class="ir-pill">IR</span>`;
     if (p.replacement) nameHtml += ` <span style="font-size:11px;color:var(--cream-dim)">▶ ${p.replacement}</span><span class="rep-pill">REP +${p.repAdded}</span>`;
     if (isLive) nameHtml += ` <span class="live-dot"></span>`;
+    // Note who this slot replaced at the break
+    let swapHtml = '';
+    if (p.changed) swapHtml = `<span class="swap-note">replaced ${firstHalfPlayer} for 2nd half</span>`;
 
     const gameInfoHtml = formatGameInfo(gi, displayPlayer);
 
@@ -1005,25 +1256,31 @@ function renderRoster() {
     return `<tr>
       <td class="player-cell">
         <div class="player-name-row">${nameHtml}</div>
+        ${swapHtml ? `<div style="margin:1px 0 2px">${swapHtml}</div>` : ''}
         <div class="today-game-info">${gameInfoHtml}</div>
       </td>
-      <td class="hr-cell">${hr}</td>
-      <td class="pace-cell ${pace>=20?'pace-good':'pace-bad'}">${pace}</td>
+      <td class="hr-cell">${h2hr}</td>
+      <td class="hr-cell" style="color:var(--cream-dim)">${season}</td>
       <td class="action-cell">${irBtn}</td>
     </tr>`;
   }).join('');
 
   body.innerHTML = `
+    <div class="race-sub" style="margin-bottom:10px">Showing the <b style="color:var(--cream)">second-half roster</b> (active). HR = second-half dingers · SEASON = full-year total.</div>
     <table class="roster-tbl">
       <thead><tr>
         <th>PLAYER</th>
-        <th class="center">HR</th>
-        <th class="center">PACE</th>
+        <th class="center">2H HR</th>
+        <th class="center">SEASON</th>
         <th class="center"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="roster-footer">Team Total: <strong style="color:var(--gold);font-family:Bebas Neue,sans-serif;font-size:18px">${totalHR} HR</strong> &nbsp;·&nbsp; Pace: <strong style="font-family:Bebas Neue,sans-serif;font-size:18px">${projectedFinal(totalHR)}</strong></div>`;
+    <div class="roster-footer">
+      1st Half (locked): <strong style="font-family:Bebas Neue,sans-serif;font-size:18px">${h1Total}</strong> &nbsp;·&nbsp;
+      2nd Half: <strong style="font-family:Bebas Neue,sans-serif;font-size:18px">${h2Total}</strong> &nbsp;·&nbsp;
+      Total: <strong style="color:var(--gold);font-family:Bebas Neue,sans-serif;font-size:18px">${seasonTotal} HR</strong>
+    </div>`;
 }
 
 async function refreshRoster() {
@@ -1035,14 +1292,18 @@ async function refreshRoster() {
 // Set of all league player names (normalized) for deduplication
 function getLeaguePlayerNames() {
   const names = new Set();
+  const add = (player) => {
+    if (!player) return;
+    const u = normName(player);
+    names.add(u);
+    const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
+    if (stripped !== u) names.add(stripped);
+  };
   MANAGERS.forEach(m => {
     POSITIONS.forEach(pos => {
       const irData = S.ir[m]?.[pos];
-      const player = irData?.replacement || ROSTERS[m][pos];
-      const u = normName(player);
-      names.add(u);
-      const stripped = u.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
-      if (stripped !== u) names.add(stripped);
+      add(irData?.replacement || SECOND_HALF_ROSTERS[m][pos]);
+      add(ROSTERS[m][pos]);          // first-half players count as league too
     });
   });
   return names;
@@ -1070,11 +1331,12 @@ async function renderActivity() {
   const body = document.getElementById('activity-body');
   body.innerHTML = '<div class="loading-pulse">LOADING...</div>';
 
-  // League players
+  // League players (active second-half roster, ranked by full-season HRs)
   const all = [];
   MANAGERS.forEach(m => {
-    getTeamData(m).positions.forEach(p => {
-      const hr = p.onIR ? p.slotHR : p.hr;
+    getSecondHalfTeam(m).positions.forEach(p => {
+      const displayPlayer = p.onIR && p.replacement ? p.replacement : p.player;
+      const hr = getHR(displayPlayer) ?? 0;
       all.push({ mgr:m, pos:p.pos, player:p.player, hr, isLeague:true });
     });
   });
@@ -1141,8 +1403,8 @@ function openIR(mgr, pos, player, currentHR) {
   const hasRep = !!S.ir[mgr]?.[pos]?.replacement;
   document.getElementById('ir-modal-title').textContent = hasRep ? 'CHANGE REPLACEMENT' : 'PLACE ON IR';
   document.getElementById('ir-modal-sub').textContent = hasRep
-    ? `Enter a new replacement for ${player}. Their HRs will count from today forward.`
-    : `${player} will be placed on IR. Their current ${currentHR} HRs are locked. Enter a replacement — only HRs they hit from today forward will count.`;
+    ? `Enter a new replacement for ${player}. Their second-half HRs will count from today forward.`
+    : `${player} goes on IR. Their ${currentHR} second-half HRs so far are locked in. Enter a replacement and their current second-half HR total — only HRs the replacement hits from today forward will count. (First-half totals are unaffected.)`;
   document.getElementById('ir-rep-name').value = '';
   document.getElementById('ir-rep-hrs').value = '';
   document.getElementById('ir-modal').classList.add('open');
@@ -1205,15 +1467,24 @@ function showPanel(name, btn) {
   } catch(e) {}
 })();
 
+// Immediate paint from whatever's cached (index-independent), then resolve IDs and fetch.
 renderStandings();
-loadLive();
-// Restore persisted today stats immediately (shows last known stats before fresh fetch)
 loadTodayStats();
 renderRoster();
 renderTodaysDingers();
-renderYesterdaysDingers();
-// Then fetch fresh data
-loadTodayGames().then(() => { renderTodaysDingers(); renderYesterdaysDingers(); renderRoster(); });
+
+(async function init() {
+  // Resolve every rostered name → MLB ID before pulling stats or game context.
+  await buildPlayerIndex();
+  resolveRosterIds();
+  // HR data (first half, second half, splits) and live game context.
+  await loadLive();
+  renderRoster();
+  await loadTodayGames();
+  renderTodaysDingers();
+  renderYesterdaysDingers();
+  renderRoster();
+})();
 </script>
 </body>
 </html>

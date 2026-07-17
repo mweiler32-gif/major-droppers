@@ -499,36 +499,35 @@
             var stateType  = (comp.status && comp.status.type && comp.status.type.state) || '';
             var isCut = statusType === 'STATUS_CUT' || statusType === 'cut';
             var isWD  = statusType === 'STATUS_WITHDRAWN' || statusType === 'wd';
-            var hasStarted = stateType !== 'pre';
             var thruRaw = (comp.status && comp.status.thru !== undefined) ? comp.status.thru : 0;
 
-            // Position: ESPN uses "0" for not-yet-started players
             var posId = comp.status && comp.status.position && comp.status.position.id;
             var posInt = posId ? parseInt(posId) : 0;
-            var position = (hasStarted && posInt > 0) ? posInt : null;
 
-            // Round scores from linescores - only use a round's score once that round is fully complete (18 holes)
+            // Round totals from linescores. A round's stroke total (>50) is FINAL data and must
+            // survive between rounds — when ESPN flips a player's live state back to 'pre'/thru 0.
             var linescores = comp.linescores || [];
             var rounds = [null, null, null, null];
+            var hasAnyRound = false;
             for (var r = 0; r < 4; r++) {
               var ls = linescores[r];
               if (ls && ls.value !== undefined && ls.value !== null && !isNaN(ls.value)) {
-                var isCurrentRound = (r === detectedRound - 1);
-                // For the round currently in progress, only count it complete once thru hits 18
-                // For past rounds, the value is always final once it exists with a teeTime
-                var roundComplete = isCurrentRound ? (thruRaw >= 18) : (ls.teeTime ? true : false);
-                if (roundComplete) {
-                  var rv = parseInt(ls.value);
-                  if (rv > 50) rounds[r] = rv; // Sanity check: real stroke totals are 50+
-                }
+                var rv = parseInt(ls.value);
+                // skip only the round the player is actively partway through right now
+                var isLiveThisRound = (stateType === 'in') && (r === detectedRound - 1) && (thruRaw < 18);
+                if (rv > 50 && !isLiveThisRound) { rounds[r] = rv; hasAnyRound = true; }
               }
             }
 
-            // Score to par: use statistics[0] (scoreToPar) displayValue
+            // "Started" = playing now, OR has a completed round, OR is placed on the board
+            var hasStarted = stateType !== 'pre' || hasAnyRound || posInt > 0;
+            var position = posInt > 0 ? posInt : null;
+
+            // Score to par persists between rounds — capture it whenever present
             var scoreDisplay = null;
             if (isCut) { scoreDisplay = 'CUT'; }
             else if (isWD) { scoreDisplay = 'WD'; }
-            else if (hasStarted) {
+            else {
               var stats = comp.statistics || [];
               for (var si = 0; si < stats.length; si++) {
                 if (stats[si].name === 'scoreToPar') {
@@ -539,12 +538,13 @@
               }
             }
 
-            var thru = hasStarted ? String(thruRaw) : null;
+            // Only show a live "thru" while actually playing; otherwise fall back to tee time
+            var thru = (stateType === 'in') ? String(thruRaw) : null;
 
-            // Tee time for unstarted players - format as local time
+            // Tee time (next round when between rounds) — capture whenever not actively playing
             var teeTimeDisplay = null;
             var teeTimeRaw = null;
-            if (!hasStarted && comp.status && comp.status.teeTime) {
+            if (stateType !== 'in' && comp.status && comp.status.teeTime) {
               teeTimeRaw = comp.status.teeTime;
               var tt = new Date(comp.status.teeTime);
               var hrs = tt.getHours();
@@ -1867,12 +1867,12 @@
                                 golferData?.today === 'E' ? 'text-gray-600' :
                                 'text-gray-400'
                               }`}>
-                                {golferData?.today || '—'}
+                                {golferData?.today ? golferData.today : (golferData?.teeTime || '—')}
                               </span>
                             </div>
                             <div className="col-span-1 text-center">
                               <span className="text-xs text-gray-500">
-                                {golferData?.thru ? golferData.thru : (golferData?.teeTime || '—')}
+                                {golferData?.thru || '—'}
                               </span>
                             </div>
                             {[0, 1, 2, 3].map(i => (
@@ -1935,20 +1935,17 @@
           });
         });
         
-        // Sort liveScores by position (nulls at bottom)
+        // Sort: leaderboard position ascending; cut/WD to the bottom; not-yet-started by tee time
         const sortedGolfers = [...liveScores].sort((a, b) => {
-          // Active players first, sorted by position
-          const aStarted = a.thru !== null;
-          const bStarted = b.thru !== null;
-          if (aStarted && !bStarted) return -1;
-          if (!aStarted && bStarted) return 1;
-          if (aStarted && bStarted) {
-            if (a.position === null && b.position === null) return 0;
-            if (a.position === null) return 1;
-            if (b.position === null) return -1;
-            return a.position - b.position;
-          }
-          // Both unstarted - sort by actual tee time using raw teeTimeRaw
+          // Cut / WD players go to the bottom
+          if (a.cut && !b.cut) return 1;
+          if (!a.cut && b.cut) return -1;
+          // Positioned players sort by position (1 = leader)
+          const ap = a.position, bp = b.position;
+          if (ap != null && bp != null) return ap - bp;
+          if (ap != null) return -1;   // on the board above not-yet-placed
+          if (bp != null) return 1;
+          // Neither is placed yet — order by tee time
           if (a.teeTimeRaw && b.teeTimeRaw) return new Date(a.teeTimeRaw) - new Date(b.teeTimeRaw);
           if (a.teeTimeRaw) return -1;
           if (b.teeTimeRaw) return 1;
@@ -2074,12 +2071,12 @@
                           golfer.today && golfer.today.startsWith('+') ? 'text-blue-600' :
                           golfer.today === 'E' ? 'text-gray-700' : 'text-gray-400'
                         }`}>
-                          {golfer.today || '—'}
+                          {golfer.today ? golfer.today : (golfer.teeTime || '—')}
                         </span>
                       </div>
                       <div className="col-span-1 text-center">
                         <span className="text-xs text-gray-500">
-                          {golfer.thru ? golfer.thru : (golfer.teeTime || '—')}
+                          {golfer.thru || '—'}
                         </span>
                       </div>
                       {[0, 1, 2, 3].map(i => (
@@ -2573,7 +2570,7 @@
           <div className="bg-gradient-to-r from-emerald-700 to-emerald-800 text-white px-4 py-4 shadow-lg">
             <div className="max-w-3xl mx-auto flex justify-between items-center">
               <div>
-                <h1 className="text-xl font-bold">🏌️ Major Droppers <span className="text-xs font-normal text-emerald-200 ml-1">v2.9 · event-pin</span></h1>
+                <h1 className="text-xl font-bold">🏌️ Major Droppers <span className="text-xs font-normal text-emerald-200 ml-1">v2.12 · tee-time</span></h1>
                 <p className="text-emerald-200 text-sm">{detectedEvent?.name || tournamentName}</p>
               </div>
               <div className={`w-3 h-3 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} title={connected ? 'Connected' : 'Disconnected'} />

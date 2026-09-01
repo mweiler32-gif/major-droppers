@@ -158,6 +158,19 @@
   .split-val { font-family:'Bebas Neue',sans-serif; font-size:18px; }
   .split-mgr { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:1px; }
 
+  /* SLOT SWAP CHAIN */
+  .stint-chain { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:3px 0 2px; font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--cream-dim); }
+  .stint { white-space:nowrap; }
+  .stint b { color:var(--brown-light); font-family:'Bebas Neue',sans-serif; font-size:14px; margin-left:2px; }
+  .stint-active { color:var(--cream); }
+  .stint-active b { color:var(--red); }
+  .stint-win { opacity:0.65; font-size:10px; }
+  .stint-arrow { opacity:0.5; }
+  .stint-lock { margin-left:4px; font-size:9px; letter-spacing:1px; text-transform:uppercase; opacity:0.55; border:1px solid rgba(255,255,255,0.15); border-radius:2px; padding:0 4px; }
+  .btn-locked { display:inline-block; background:rgba(255,255,255,0.05); color:var(--cream-dim); border:1px solid rgba(255,255,255,0.12); cursor:default; }
+  .modal-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--cream-dim); margin:8px 0 3px; }
+  .modal-err { font-family:'Barlow Condensed',sans-serif; font-size:12px; color:var(--red); min-height:16px; margin-top:6px; }
+
   /* IR SECTION */
   .ir-section { background:rgba(196,30,58,0.06); border:1px solid rgba(196,30,58,0.2); border-radius:4px; padding:14px 16px; margin-top:6px; }
   .ir-section h4 { font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:3px; color:var(--red); margin-bottom:10px; }
@@ -243,10 +256,12 @@
   <div class="modal-box">
     <h3 id="ir-modal-title">PLACE ON IR</h3>
     <p id="ir-modal-sub"></p>
-    <input class="modal-input" id="ir-rep-name" type="text" placeholder="Replacement player name" />
-    <input class="modal-input" id="ir-rep-hrs" type="number" placeholder="Replacement's current 2nd-half HR total" min="0" />
+    <input class="modal-input" id="ir-rep-name" type="text" placeholder="Incoming player's full name" />
+    <label class="modal-label" for="ir-swap-date">First day the new guy counts for this slot</label>
+    <input class="modal-input" id="ir-swap-date" type="date" />
+    <div class="modal-err" id="ir-modal-err"></div>
     <div class="modal-btns">
-      <button class="btn-primary" onclick="confirmIR()">CONFIRM</button>
+      <button class="btn-primary" id="ir-confirm-btn" onclick="confirmIR()">CONFIRM</button>
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
   </div>
@@ -345,12 +360,90 @@ SECOND_HALF_ROSTERS.WEILER.C    = 'Dillon Dingler';   // out William Contreras
 SECOND_HALF_ROSTERS.WEILER.RF   = 'Jac Caglianone';   // out Ronald Acuna Jr.
 SECOND_HALF_ROSTERS.WEILER['2B']= 'Brice Turang';     // out Matt McLain
 
-// Every distinct player across both halves (used to resolve MLB IDs).
+// ── IR / IN-SEASON SWAPS (SECOND HALF ONLY) ───────────────
+// A slot is scored as a POSITION, not a player: its second-half HR total is the
+// sum of each occupant's HRs during the window he actually held the slot. A guy
+// who leaves keeps what he hit while he was in; he can never add to it again.
+// A guy who arrives counts only from his start date forward.
+//
+// Shape: SEED_IR[MANAGER][POS] = [ {player, to}, {player, from}, ... ]
+//   - the first stint's `from` defaults to SECOND_HALF_START
+//   - the last stint's `to` defaults to today (open window)
+//   - dates are YYYY-MM-DD and are INCLUSIVE on both ends, so the incoming
+//     player's `from` is the DAY AFTER the outgoing player's `to`. Give one or
+//     the other and the missing side is derived; never both off by a day.
+//
+// Every window below is queried live from the MLB API, so there are no frozen
+// numbers to go stale and nothing to re-enter by hand. Seeded entries here are
+// baked into the file, so every manager on every device sees the same slot.
+const SEED_IR = {
+  // Casey Schmitt to the IL. His LF HRs from 7/15 through 8/30 stay on Roberts'
+  // board and stop growing; Chourio counts for the slot from 8/31 forward only.
+  ROBERTS: { LF: [ { player:'Casey Schmitt',    to:'2026-08-30' },
+                   { player:'Jackson Chourio',  from:'2026-08-31' } ] },
+
+  // Example — WEILER's 3B slot: Caminero through 8/24, Mayo from 8/25 on.
+  // WEILER: { '3B': [ { player:'Junior Caminero', to:'2026-08-24' },
+  //                   { player:'Coby Mayo',       from:'2026-08-25' } ] },
+};
+
+// Normalize a slot into a full stint list with every from/to filled in.
+// Plain slots (no IR) come back as a single open stint — identical to the old
+// behavior, so nothing changes for the 41 slots that never moved.
+// '2026-08-31' -> '8/31' for compact window labels.
+function fmtMD(ymd) {
+  if (!ymd) return 'now';
+  const [, m, d] = ymd.split('-');
+  return `${Number(m)}/${Number(d)}`;
+}
+function shiftDay(ymd, n) {
+  const [y,m,d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m-1, d + n));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
+}
+function slotStints(mgr, pos) {
+  const seeded = SEED_IR[mgr] && SEED_IR[mgr][pos];
+  let local = null; try { local = S.ir && S.ir[mgr] && S.ir[mgr][pos]; } catch(e) {}  // S may still be in TDZ during module init
+  const raw = seeded || local;
+  if (!raw || !Array.isArray(raw) || !raw.length) {
+    return [{ player: SECOND_HALF_ROSTERS[mgr][pos], from: SECOND_HALF_START, to: null, seeded: !!seeded }];
+  }
+  return raw.map((s, i) => ({
+    player: s.player,
+    from: s.from || (i === 0
+            ? SECOND_HALF_START
+            : (raw[i-1].to ? shiftDay(raw[i-1].to, 1) : SECOND_HALF_START)),
+    to:   (i === raw.length - 1)
+            ? (s.to || null)
+            : (s.to || (raw[i+1].from ? shiftDay(raw[i+1].from, -1) : null)),
+    seeded: !!seeded,
+  }));
+}
+function slotHasStints(mgr, pos) { return slotStints(mgr, pos).length > 1; }
+function slotIsSeeded(mgr, pos)  { return !!(SEED_IR[mgr] && SEED_IR[mgr][pos]); }
+// The guy currently holding the slot — use this anywhere you need "who's in there now".
+function activePlayer(mgr, pos) {
+  const st = slotStints(mgr, pos);
+  return st[st.length - 1].player;
+}
+// Clip a slot's stints to an arbitrary [ws, we] window (YYYY-MM-DD sorts lexically).
+function clampStints(mgr, pos, ws, we) {
+  return slotStints(mgr, pos).map(s => {
+    const from = s.from > ws ? s.from : ws;
+    const to   = (s.to || we) < we ? (s.to || we) : we;
+    return from <= to ? { player: s.player, from, to } : null;
+  }).filter(Boolean);
+}
+
+// Every distinct player across both halves AND every IR occupant (used to
+// resolve MLB IDs). Replacements MUST be in here or their stats never get
+// fetched and their slot silently reads zero.
 function allRosteredPlayers() {
   const set = new Set();
   MANAGERS.forEach(m => POSITIONS.forEach(pos => {
     if (ROSTERS[m][pos]) set.add(ROSTERS[m][pos]);
     if (SECOND_HALF_ROSTERS[m][pos]) set.add(SECOND_HALF_ROSTERS[m][pos]);
+    slotStints(m, pos).forEach(s => { if (s.player) set.add(s.player); });
   }));
   return [...set];
 }
@@ -361,7 +454,26 @@ function slotChanged(mgr, pos) {
 
 // ── STATE ─────────────────────────────────────────────────
 function mkState() { return { ir: Object.fromEntries(MANAGERS.map(m=>[m,{}])) }; }
-let S = (() => { try { const r=localStorage.getItem(SK); return r?JSON.parse(r):mkState(); } catch(e){return mkState();} })();
+// Old saved IR entries were a single {originalPlayer, replacement, repStartDate, ...}
+// object per slot. Convert them to the stint list so nobody's existing browser
+// state silently disappears on first load of this version.
+function migrateState(st) {
+  if (!st || !st.ir) return mkState();
+  MANAGERS.forEach(m => {
+    if (!st.ir[m]) { st.ir[m] = {}; return; }
+    Object.keys(st.ir[m]).forEach(pos => {
+      const v = st.ir[m][pos];
+      if (Array.isArray(v)) return;                       // already migrated
+      if (!v || typeof v !== 'object') { delete st.ir[m][pos]; return; }
+      const start = v.repStartDate || todayStr();
+      const out = [{ player: v.originalPlayer || SECOND_HALF_ROSTERS[m][pos], to: shiftDay(start, -1) }];
+      if (v.replacement) out.push({ player: v.replacement, from: start });
+      st.ir[m][pos] = out;
+    });
+  });
+  return st;
+}
+let S = (() => { try { const r=localStorage.getItem(SK); return migrateState(r?JSON.parse(r):mkState()); } catch(e){return mkState();} })();
 function save() { try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){} }
 
 let liveHR = {};                 // season totals (h1 + h2), derived
@@ -592,6 +704,72 @@ function deriveSeason(h1, h2) {
   return out;
 }
 
+// ── SLOT-WINDOW HR DATA (IR slots only) ───────────────────
+// For a slot that changed hands mid-half, the whole-half totals in h2HR are the
+// wrong number for BOTH occupants: the outgoing guy's include HRs after he left
+// and the incoming guy's include HRs before he arrived. So each stint gets its
+// own date-bounded query and the slot is the sum. Slots that never changed hands
+// are untouched and keep using h2HR.
+let stintHR = {};   // `${mgr}|${pos}|${i}` -> HRs during stint i's own window
+let slotWin = {};   // `${mgr}|${pos}|${tag}` -> HRs for that slot over a split window
+
+async function windowHR(playerName, start, end) {
+  const id = resolvePlayerId(playerName);
+  if (id == null) return 0;
+  try {
+    const r = await fetch(`https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=byDateRange&season=2026&startDate=${start}&endDate=${end}&group=hitting`);
+    if (!r.ok) return 0;
+    const d = await r.json();
+    // byDateRange returns the aggregate as splits[0]; later splits re-break it out.
+    return parseInt(d?.stats?.[0]?.splits?.[0]?.stat?.homeRuns) || 0;
+  } catch(e) { return 0; }
+}
+
+// Fingerprint of every slot's occupant chain. If this changes — you pushed a new
+// SEED_IR, or a manager made a local swap — any cached HR payload is stale and
+// must be thrown out, even if it's only seconds old.
+function slotSignature() {
+  const parts = [];
+  MANAGERS.forEach(m => POSITIONS.forEach(pos => {
+    const st = slotStints(m, pos);
+    if (st.length > 1) parts.push(`${m}|${pos}|` + st.map(x => `${x.player}@${x.from}-${x.to||''}`).join(','));
+  }));
+  return parts.join(';');
+}
+
+async function fetchSlotWindows() {
+  const today = todayStr();
+  const splitWindows = [
+    { tag:'d7',  start: dateStr(7)  },
+    { tag:'d14', start: dateStr(14) },
+    { tag:'d30', start: dateStr(30) },
+  ];
+  const nextStint = {}, nextWin = {};
+  const jobs = [];
+
+  MANAGERS.forEach(m => POSITIONS.forEach(pos => {
+    if (!slotHasStints(m, pos)) return;
+    // Per-stint totals over each stint's own window (drives the 2H slot total).
+    slotStints(m, pos).forEach((s, i) => {
+      jobs.push(windowHR(s.player, s.from, s.to || today)
+        .then(hr => { nextStint[`${m}|${pos}|${i}`] = hr; }));
+    });
+    // Rolling splits, clipped so no occupant is credited outside his own stint.
+    splitWindows.forEach(w => {
+      const key = `${m}|${pos}|${w.tag}`;
+      nextWin[key] = 0;
+      clampStints(m, pos, w.start, today).forEach(p => {
+        jobs.push(windowHR(p.player, p.from, p.to)
+          .then(hr => { nextWin[key] = (nextWin[key] || 0) + hr; }));
+      });
+    });
+  }));
+
+  await Promise.all(jobs);
+  stintHR = nextStint;
+  slotWin = nextWin;
+}
+
 async function loadLive(force = false) {
   const now = Date.now();
   const TEN_MIN = 5 * 60 * 1000; // 5 min cache
@@ -605,10 +783,11 @@ async function loadLive(force = false) {
   // Try localStorage cache first for instant render
   try {
     const cached = JSON.parse(localStorage.getItem(HR_CACHE_KEY) || 'null');
-    if (!force && cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN && cached.h1) {
+    if (!force && cached && cached.date === todayStr() && (now - cached.ts) < TEN_MIN && cached.h1 && cached.v === 2 && cached.sig === slotSignature()) {
       h1HR = cached.h1; h2HR = cached.h2;
       liveHR = deriveSeason(h1HR, h2HR);
       splitHR = { d7: cached.d7, d14: cached.d14, d30: cached.d30 };
+      stintHR = cached.stint || {}; slotWin = cached.slotwin || {};
       lastHRFetch = cached.ts;
       document.getElementById('upd-txt').textContent = `Updated ${new Date(cached.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · cached`;
       renderStandings(); renderActivity().catch(console.error); renderSplits();
@@ -634,12 +813,14 @@ async function loadLive(force = false) {
     h1HR = h1; h2HR = h2;
     liveHR = deriveSeason(h1, h2);
     splitHR = { d7, d14, d30 };
+    // Date-bounded totals for any slot that changed hands mid-half.
+    await fetchSlotWindows();
     lastHRFetch = Date.now();
     // Cache to localStorage
     try {
       localStorage.setItem(HR_CACHE_KEY, JSON.stringify({
-        date: today, ts: lastHRFetch,
-        h1, h2, d7, d14, d30
+        v: 2, sig: slotSignature(), date: today, ts: lastHRFetch,
+        h1, h2, d7, d14, d30, stint: stintHR, slotwin: slotWin
       }));
     } catch(e) {}
     const ct = Object.values(liveHR).filter(v=>v>0).length;
@@ -926,8 +1107,7 @@ async function renderYesterdaysDingers() {
     const dingers = [];
     MANAGERS.forEach(mgr => {
       POSITIONS.forEach(pos => {
-        const irData = S.ir[mgr]?.[pos];
-        const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
+        const player = activePlayer(mgr, pos);
         const key = normName(player);
         const stripped = key.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/, '').trim();
         const last = stripped.split(' ').slice(-1)[0];
@@ -989,22 +1169,34 @@ function getSecondHalfTeam(mgr) {
   const positions = [];
   let totalHR = 0;
   POSITIONS.forEach(pos => {
-    const player = SECOND_HALF_ROSTERS[mgr][pos];
-    const irData = S.ir[mgr]?.[pos];
     const changed = slotChanged(mgr, pos);
-    if (!irData) {
+    const stints = slotStints(mgr, pos);
+    if (stints.length === 1) {
+      // Slot never changed hands: whole-half total is correct as-is.
+      const player = stints[0].player;
       const hr = getH2(player) ?? 0;
-      positions.push({ pos, player, hr, onIR:false, replacement:null, changed });
+      positions.push({ pos, player, hr, onIR:false, replacement:null, changed, stints, parts:null, slotHR:hr, seeded: slotIsSeeded(mgr, pos) });
       totalHR += hr;
     } else {
-      const locked = irData.lockedHR || 0;
-      let repAdded = 0;
-      if (irData.replacement) {
-        const repCurrent = getH2(irData.replacement) ?? irData.repStartHR ?? 0;
-        repAdded = Math.max(0, repCurrent - (irData.repStartHR || 0));
-      }
-      const slotHR = locked + repAdded;
-      positions.push({ pos, player, hr:locked, onIR:true, replacement:irData.replacement, repAdded, slotHR, lockedHR:locked, changed });
+      // Slot changed hands: sum each occupant's HRs over his own window only.
+      const parts = stints.map((s, i) => ({ ...s, hr: stintHR[`${mgr}|${pos}|${i}`] ?? 0 }));
+      const slotHR   = parts.reduce((a, b) => a + b.hr, 0);
+      const current  = parts[parts.length - 1];
+      const lockedHR = parts.slice(0, -1).reduce((a, b) => a + b.hr, 0);
+      positions.push({
+        pos,
+        player: parts[0].player,        // the original second-half occupant
+        hr: parts[0].hr,
+        onIR: true,
+        replacement: current.player,    // who's in the slot right now
+        repAdded: current.hr,           // what he's added since taking it over
+        lockedHR,                       // everything banked by prior occupants
+        slotHR,
+        parts,
+        stints,
+        seeded: slotIsSeeded(mgr, pos),
+        changed,
+      });
       totalHR += slotHR;
     }
   });
@@ -1066,8 +1258,7 @@ function renderTodaysDingers() {
   const dingers = [];
   MANAGERS.forEach(mgr => {
     POSITIONS.forEach(pos => {
-      const irData = S.ir[mgr]?.[pos];
-      const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
+      const player = activePlayer(mgr, pos);
       const gi = getPlayerGameInfo(player);
       if (gi && gi.hr > 0) {
         dingers.push({ player, mgr, pos, hr: gi.hr, away: gi.away, home: gi.home, isFinal: gi.isFinal, isLive: gi.isLive });
@@ -1107,8 +1298,7 @@ function renderTodaysDingers() {
 function getTodayHRsForManager(mgr) {
   let total = 0;
   POSITIONS.forEach(pos => {
-    const irData = S.ir[mgr]?.[pos];
-    const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
+    const player = activePlayer(mgr, pos);
     const gi = getPlayerGameInfo(player);
     if (gi && !gi.isUpcoming && gi.hr > 0) total += gi.hr;
   });
@@ -1178,19 +1368,27 @@ function renderStandings() {
 }
 
 // ── SPLITS ────────────────────────────────────────────────
-function getTeamSplit(mgr, hrMap) {
+// For a slot that changed hands, the rolling window is clipped per occupant
+// (precomputed into slotWin) so nobody is credited for HRs hit outside his stint.
+function getTeamSplit(mgr, hrMap, tag) {
   let total = 0;
   POSITIONS.forEach(pos => {
-    const irData = S.ir[mgr]?.[pos];
-    const player = irData?.replacement || SECOND_HALF_ROSTERS[mgr][pos];
-    total += lookupHR(hrMap, player) ?? 0;
+    if (slotHasStints(mgr, pos)) {
+      total += slotWin[`${mgr}|${pos}|${tag}`] ?? 0;
+    } else {
+      total += lookupHR(hrMap, activePlayer(mgr, pos)) ?? 0;
+    }
   });
   return total;
 }
 function computeSplits() {
   const result = {};
   MANAGERS.forEach(m => {
-    result[m] = { d7:getTeamSplit(m,splitHR.d7), d14:getTeamSplit(m,splitHR.d14), d30:getTeamSplit(m,splitHR.d30) };
+    result[m] = {
+      d7:  getTeamSplit(m, splitHR.d7,  'd7'),
+      d14: getTeamSplit(m, splitHR.d14, 'd14'),
+      d30: getTeamSplit(m, splitHR.d30, 'd30'),
+    };
   });
   return result;
 }
@@ -1227,36 +1425,53 @@ function renderRoster() {
   const body = document.getElementById('roster-body');
 
   const rows = positions.map(p => {
-    const h2hr = p.onIR ? p.slotHR : p.hr;
+    const h2hr = p.slotHR ?? p.hr;
     const displayPlayer = p.onIR && p.replacement ? p.replacement : p.player;
-    const season = getHR(displayPlayer) ?? 0;
+    // Both HR columns are SLOT totals, not player totals, so the row adds up to
+    // the standings: whoever held the slot in the first half + the slot's
+    // second-half chain. (The occupant's own career line is not the unit here.)
+    const season = (getH1(ROSTERS[rMgr][p.pos]) ?? 0) + h2hr;
     const gi = getPlayerGameInfo(displayPlayer);
     const isLive = gi?.isLive || false;
     const firstHalfPlayer = ROSTERS[rMgr][p.pos];
 
-    // Player name row
+    // Player name row — the SLOT is the unit, so show who's in it now and
+    // spell out the chain of occupants underneath with each one's contribution.
     let nameHtml = `<span class="pos-pill">${p.pos}</span>`;
-    nameHtml += `<span class="player-name">${p.player}</span>`;
+    nameHtml += `<span class="player-name">${p.onIR ? p.replacement : p.player}</span>`;
     if (p.changed) nameHtml += `<span class="rep-pill">NEW 2H</span>`;
-    if (p.onIR) nameHtml += `<span class="ir-pill">IR</span>`;
-    if (p.replacement) nameHtml += ` <span style="font-size:11px;color:var(--cream-dim)">▶ ${p.replacement}</span><span class="rep-pill">REP +${p.repAdded}</span>`;
+    if (p.onIR) {
+      nameHtml += `<span class="ir-pill">SLOT</span>`;
+      nameHtml += `<span class="rep-pill">+${p.repAdded} SINCE ${fmtMD(p.parts[p.parts.length-1].from)}</span>`;
+    }
     if (isLive) nameHtml += ` <span class="live-dot"></span>`;
     // Note who this slot replaced at the break
     let swapHtml = '';
     if (p.changed) swapHtml = `<span class="swap-note">replaced ${firstHalfPlayer} for 2nd half</span>`;
+    // Full occupant chain for a slot that changed hands mid-half.
+    let chainHtml = '';
+    if (p.onIR) {
+      chainHtml = `<div class="stint-chain">` + p.parts.map((s, i) =>
+        `<span class="stint${i === p.parts.length-1 ? ' stint-active' : ''}">${s.player} <span class="stint-win">${fmtMD(s.from)}–${s.to ? fmtMD(s.to) : 'now'}</span> <b>${s.hr}</b></span>`
+      ).join(`<span class="stint-arrow">→</span>`) +
+      (p.seeded ? `<span class="stint-lock">locked in file</span>` : '') + `</div>`;
+    }
 
     const gameInfoHtml = formatGameInfo(gi, displayPlayer);
 
-    const irBtn = !p.onIR
-      ? `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}','${p.player.replace(/'/g,"\\'")}',${p.hr})">IR</button>`
-      : p.replacement
-        ? `<button class="btn-sm btn-restore" onclick="restoreFromIR('${rMgr}','${p.pos}')">Restore</button>`
-        : `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}','${p.player.replace(/'/g,"\\'")}',${p.lockedHR})">Add Rep</button>`;
+    // Seeded slots are committed in the file and shared by the whole league —
+    // don't let a local click diverge one manager's view from everyone else's.
+    const cur = (p.onIR ? p.replacement : p.player).replace(/'/g, "\\'");
+    const irBtn = p.seeded
+      ? `<span class="btn-sm btn-locked" title="Set in the file — same for every manager">LOCKED</span>`
+      : `<button class="btn-sm btn-ir" onclick="openIR('${rMgr}','${p.pos}')">Swap</button>` +
+        (p.onIR ? `<button class="btn-sm btn-restore" onclick="undoSwap('${rMgr}','${p.pos}')">Undo</button>` : '');
 
     return `<tr>
       <td class="player-cell">
         <div class="player-name-row">${nameHtml}</div>
         ${swapHtml ? `<div style="margin:1px 0 2px">${swapHtml}</div>` : ''}
+        ${chainHtml}
         <div class="today-game-info">${gameInfoHtml}</div>
       </td>
       <td class="hr-cell">${h2hr}</td>
@@ -1266,7 +1481,7 @@ function renderRoster() {
   }).join('');
 
   body.innerHTML = `
-    <div class="race-sub" style="margin-bottom:10px">Showing the <b style="color:var(--cream)">second-half roster</b> (active). HR = second-half dingers · SEASON = full-year total.</div>
+    <div class="race-sub" style="margin-bottom:10px">Showing the <b style="color:var(--cream)">second-half roster</b> (active). Both columns are <b style="color:var(--cream)">slot</b> totals, not player totals — a slot keeps every HR hit by everyone who held it, and each occupant only counts inside his own window.</div>
     <table class="roster-tbl">
       <thead><tr>
         <th>PLAYER</th>
@@ -1301,8 +1516,7 @@ function getLeaguePlayerNames() {
   };
   MANAGERS.forEach(m => {
     POSITIONS.forEach(pos => {
-      const irData = S.ir[m]?.[pos];
-      add(irData?.replacement || SECOND_HALF_ROSTERS[m][pos]);
+      slotStints(m, pos).forEach(st => add(st.player));
       add(ROSTERS[m][pos]);          // first-half players count as league too
     });
   });
@@ -1397,35 +1611,86 @@ async function renderActivity() {
     </table>`;
 }
 
-// ── IR MANAGEMENT ─────────────────────────────────────────
-function openIR(mgr, pos, player, currentHR) {
-  irPending = { mgr, pos, player, currentHR };
-  const hasRep = !!S.ir[mgr]?.[pos]?.replacement;
-  document.getElementById('ir-modal-title').textContent = hasRep ? 'CHANGE REPLACEMENT' : 'PLACE ON IR';
-  document.getElementById('ir-modal-sub').textContent = hasRep
-    ? `Enter a new replacement for ${player}. Their second-half HRs will count from today forward.`
-    : `${player} goes on IR. Their ${currentHR} second-half HRs so far are locked in. Enter a replacement and their current second-half HR total — only HRs the replacement hits from today forward will count. (First-half totals are unaffected.)`;
+// ── SLOT SWAPS (IR / in-season replacement) ───────────────
+// Appends a stint. The outgoing occupant's window closes the day before the new
+// guy's start date, so his banked HRs are frozen and he can never add to this
+// slot again; the incoming guy is credited only from his start date forward.
+function openIR(mgr, pos) {
+  const stints = slotStints(mgr, pos);
+  const cur = stints[stints.length - 1];
+  irPending = { mgr, pos, outgoing: cur.player };
+  document.getElementById('ir-modal-title').textContent = 'SWAP THIS SLOT';
+  document.getElementById('ir-modal-sub').textContent =
+    `${cur.player} comes out of ${mgr}'s ${pos}. Everything he hit while he held the slot stays on the board — he just stops adding to it. The incoming player counts from his start date forward, nothing before.`;
   document.getElementById('ir-rep-name').value = '';
-  document.getElementById('ir-rep-hrs').value = '';
+  document.getElementById('ir-swap-date').value = todayStr();
+  document.getElementById('ir-swap-date').min = cur.from;
+  document.getElementById('ir-swap-date').max = todayStr();
+  document.getElementById('ir-modal-err').textContent = '';
   document.getElementById('ir-modal').classList.add('open');
 }
-function confirmIR() {
+
+async function confirmIR() {
   if (!irPending) return;
-  const { mgr, pos, player, currentHR } = irPending;
+  const { mgr, pos } = irPending;
+  const err = document.getElementById('ir-modal-err');
+  const btn = document.getElementById('ir-confirm-btn');
   const repName = document.getElementById('ir-rep-name').value.trim();
-  const repHRs = parseInt(document.getElementById('ir-rep-hrs').value) || 0;
-  if (!repName) { alert('Please enter a replacement player name.'); return; }
-  if (!S.ir[mgr]) S.ir[mgr] = {};
-  const existing = S.ir[mgr][pos];
-  S.ir[mgr][pos] = { originalPlayer:player, lockedHR: existing ? existing.lockedHR : currentHR, replacement:repName, repStartHR:repHRs, repStartDate:todayStr() };
-  save(); closeModal(); renderRoster(); renderStandings();
+  const start   = document.getElementById('ir-swap-date').value;
+  err.textContent = '';
+
+  if (!repName) { err.textContent = 'Enter the incoming player\'s name.'; return; }
+  if (!start)   { err.textContent = 'Pick a start date.'; return; }
+
+  const stints = slotStints(mgr, pos);
+  const cur = stints[stints.length - 1];
+  if (start < cur.from) { err.textContent = `Start date can't be before ${fmtMD(cur.from)} — that's when the current occupant took the slot.`; return; }
+  if (start > todayStr()) { err.textContent = 'Start date can\'t be in the future.'; return; }
+
+  // Validate the name against MLB's roster BEFORE saving. An unresolvable name
+  // is the failure mode that used to sit there silently reading zero.
+  btn.disabled = true; btn.textContent = 'CHECKING...';
+  try {
+    if (!playerIndexReady) await buildPlayerIndex();
+    const id = resolvePlayerId(repName);
+    if (id == null) {
+      err.innerHTML = `Couldn't match <b>${repName}</b> to an MLB player. Use the full name exactly as it reads on baseballsavant.mlb.com.`;
+      return;
+    }
+    if (!S.ir[mgr]) S.ir[mgr] = {};
+    const chain = stints.map(x => ({ player: x.player, from: x.from, to: x.to }));
+    chain[chain.length - 1].to = shiftDay(start, -1);
+    chain.push({ player: repName, from: start, to: null });
+    S.ir[mgr][pos] = chain;
+    save();
+    closeModal();
+    // The new occupant isn't in the fetch set yet — re-resolve and repull.
+    resolveRosterIds();
+    renderRoster(); renderStandings();
+    await loadLive(true);
+    await loadTodayGames(true);
+    renderRoster(); renderStandings(); renderTodaysDingers(); renderSplits();
+  } finally {
+    btn.disabled = false; btn.textContent = 'CONFIRM';
+  }
 }
-function restoreFromIR(mgr, pos) {
-  if (!S.ir[mgr]?.[pos]) return;
-  if (!confirm(`Restore ${S.ir[mgr][pos].originalPlayer} from IR?`)) return;
-  delete S.ir[mgr][pos];
-  save(); renderRoster(); renderStandings();
+
+// Undo the most recent local swap on a slot (mis-click escape hatch).
+async function undoSwap(mgr, pos) {
+  const chain = S.ir[mgr] && S.ir[mgr][pos];
+  if (!Array.isArray(chain) || chain.length < 2) return;
+  const dropped = chain[chain.length - 1].player;
+  if (!confirm(`Undo the swap to ${dropped}? The slot goes back to ${chain[chain.length-2].player} as if it never happened.`)) return;
+  chain.pop();
+  chain[chain.length - 1].to = null;
+  if (chain.length < 2) delete S.ir[mgr][pos]; else S.ir[mgr][pos] = chain;
+  save();
+  resolveRosterIds();
+  renderRoster(); renderStandings();
+  await loadLive(true);
+  renderRoster(); renderStandings(); renderSplits();
 }
+
 function closeModal() { document.getElementById('ir-modal').classList.remove('open'); irPending=null; }
 
 // ── NAV ───────────────────────────────────────────────────
